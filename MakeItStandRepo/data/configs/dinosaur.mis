@@ -1,0 +1,7 @@
+mesh dinosaur.obj
+mesh_rotation 1 0 0 0
+flatten_threshold 0.005
+vertex_handle 0.642614 0.470153 0.504794
+vertex_handle 0.884196 0.428136 0.500206
+vertex_handle 0.486743 0.618477 0.501346
+vertex_handle 0.271551  0.57244 0.501293
