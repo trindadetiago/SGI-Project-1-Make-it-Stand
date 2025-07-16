@@ -112,3 +112,20 @@ def f3(V,E,V_og):
  f3 = 1/2 of the norm squared
  return f3
 ```
+
+## Taking all the objectives into account
+the function we want to minimize is
+
+$$ f(V,b,c)=f_1(V,b,c)+f_2(V)+f_3(V) = \frac{1}{2}\left\|c(V,b,c)[0]-c^*[0]\right\|^2 + \sum_{v0,v1,v2\in V} \frac{1}{2}\left\|\left\|v_1-\frac{1}{2}\left(v_0+v_2\right)\right\|\right\|^2 + \frac{1}{2}\left\|\left\|V'-V\right\|\right\|^2$$
+
+It would be good to add some weights ($\lambda_i$) so that not all parts are optimized in the same way; we must give importance to some optimizations over others, also we need to add scaling factors ($\mu_i$) to avoid comparing pears to apples (as we say in Spain hahaha).
+
+$$ f(V,b,c)=\lambda_1 f_1(V,b,c)+\lambda_2 \mu_2 f_2(V)+\lambda_3 \mu_3 f_3(V)$$
+
+s.t. $\lambda_1+\lambda_2+\lambda_3=1$
+
+
+# 3rd: Optimize
+to be continue...
+
+
