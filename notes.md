@@ -13,7 +13,9 @@ We need to define a function `f` that if we minimize it we achieved diferent obj
 Let's get to it.
 
 ## Stabilization thanks to carving
-This one is the most complicated. But before... what is stabilizing? Stabilizing means moving the center of mass of our shape so that its projection lies within the stable zone \[add better definition\]. How can we do it? By going from a completely solid shape to one that isn’t fully solid, that is, we’ve carved the inner surface/volume. Check \[_Spin-It Faster: Quadrics Solve All Topology Optimization Problems That Depend Only On Mass Moments_ from Hanfer et all\] to make sure it’s enough to consider just a line that produces that carving.
+This one is the most complicated. But before... what is stabilizing? Stabilizing means moving the center of mass of our shape so that its projection lies within the stable zone \[add better definition\]. How can we do it? By going from a completely solid shape to one that isn’t fully solid, that is, we’ve carved the inner surface/volume. Check \[_Spin-It Faster: Quadrics Solve All Topology Optimization Problems That Depend Only On Mass Moments_ from Hanfer et all\] to make sure it’s enough to consider just a line that produces that carving. The last question is, how can we compute the center of mass after craving the shape?
+
+### Center of mass computation
 
 As we see in the first image, we have the shape we want to stabilize and a blue line given by its equation, aka two variables, `y=bx+c` that divide the surface in a completely rigid zone and an empty one. How do we compute it? How do we find the different intersections? The idea can be seen in the image, but I’ll explain it to you:
 
@@ -33,10 +35,30 @@ As we see in the first image, we have the shape we want to stabilize and a blue 
 
 ![carving1](assets/carving1.png)
 
-Once we have the intersections, we need to define which side is filled and which is not. And I don't know which one (Samara help hahaha). 
+Once we have the intersections, we need to define which side is filled and which is not. And I don't know which one (Samara help hahaha). So we assume we know which one.
+
+We can extract from our data, `V, E`, the list of vertices and edges that lie between each pair of purple intersections. If we create a new polyline using only those vertices from the original, add the intersections, and connect them properly to the nearby vertices, we obtain the orange surface `V', E'`. And for this new surface, which is assumed to be completely filled, we can compute the green center of mass as Samara explained to us. But wait, we haven’t taken into account the rest of the initial polyline, which also has weight! This could be addressed by creating, for each of those segments, a rectangle with a specific thickness and trivially calculating the center of mass of each rectangle. Then, using a weighted average with the green center of mass, we can obtain a better approximation of the actual center of mass. (It's calculated as follows $c=\frac{\sum_i m_i\cdot c_i}{\sum_i m_i}$)
 
 ![carving2](assets/carving2.png)
 
+### f1 function to optimize
+The goal is to make the shape stable, which in other words means ensuring that the horizontal projection of the center of mass is as close as possible to the center of the support zone (`c*` in the drawig). So we need to minimize that distance, our function is:
+
+$$f_1(V,b,c)=\frac{1}{2}\left\|c(V,b,c)[0]-c^*[0]\right\|^2$$
+
+Where we already know $c^*$ by averaging all the vertices whose second coordinate is 0.
+
+The pseudo code will be something like
+```python
+from centermass import centermass
+def f1(V,E,b,c):
+ compute c* by averaging all the vertices whose second coordinate is 0
+ compute c by calling centermass(V,E,b,c)
+ calculate the difference D=c[0]-c*[0]
+ compute the abs np.abs(D)
+ f1 = 1/2 of the abs squared
+ return f1
+```
 
 
 ## Smoothing the surface
@@ -87,6 +109,6 @@ A kind off pseudocode for this will be:
 def f3(V,E,V_og):
  calculate the difference D=V-V_og
  compute the norm np.linalg.norm(D, ord=2)
- f3 = 1/2 of the norm
+ f3 = 1/2 of the norm squared
  return f3
 ```
