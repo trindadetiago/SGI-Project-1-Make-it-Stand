@@ -1,3 +1,6 @@
+"""
+This module contains functions for processing shapes.
+"""
 from shape2d import Shape2D
 
 def scale_shape(shape: Shape2D, factor: float) -> Shape2D:
