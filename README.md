@@ -4,6 +4,8 @@ How do we ensure a 3D printed object can stand in a desired orientation but stil
 This results in a cool shape (and density) optimization problem with a surprisingly simple class of solutions. Exploring how shape and
 density affect stability will involve learning many fundamentals in geometric processing and optimization!
 
+<img width="1046" height="651" alt="image" src="https://github.com/user-attachments/assets/9e75da11-f043-4b57-809d-cfd658a6c8bd" />
+
 ---
 
 ## Getting Started (For Beginners)
