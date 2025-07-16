@@ -13,9 +13,28 @@ We need to define a function `f` that if we minimize it we achieved diferent obj
 Let's get to it.
 
 ## Stabilization thanks to carving
-This one is the most complicated. As we see in the first image, we have the shape we want to stabilize and a blue line given by its equation, aka two variables, `y=bx+c`
+This one is the most complicated. But before... what is stabilizing? Stabilizing means moving the center of mass of our shape so that its projection lies within the stable zone \[add better definition\]. How can we do it? By going from a completely solid shape to one that isn’t fully solid, that is, we’ve carved the inner surface/volume. Check \[_Spin-It Faster: Quadrics Solve All Topology Optimization Problems That Depend Only On Mass Moments_ from Hanfer et all\] to make sure it’s enough to consider just a line that produces that carving.
+
+As we see in the first image, we have the shape we want to stabilize and a blue line given by its equation, aka two variables, `y=bx+c` that divide the surface in a completely rigid zone and an empty one. How do we compute it? How do we find the different intersections? The idea can be seen in the image, but I’ll explain it to you:
+
+> For each edge, we construct the equation of the line that contains it.
+> 
+> find the intersection with the blue equation.
+> 
+> If that intersection is not on the edge or doesn’t exist, (*yellow case*)
+> 
+> then it’s not the one we’re looking for.
+> 
+> If that intersection is on the edge or there are infinite intersections, (*purple case*)
+> 
+> then we save that intersection in a list.
+> 
+> By the end, we have the full list of intersections.
 
 ![carving1](assets/carving1.png)
+
+Once we have the intersections, we need to define which side is filled and which is not. And I don't know which one (Samara help hahaha). 
+
 ![carving2](assets/carving2.png)
 
 
