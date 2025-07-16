@@ -49,7 +49,7 @@ class ShapeGUI(QWidget):
         self.draw_mode = False
         self.add_edge_mode = False
         self.selected_vertices = []  # For edge creation
-        self._fill_item = None
+        self._last_tab_index = 0
         self.init_ui()
 
     def init_ui(self):
@@ -61,6 +61,7 @@ class ShapeGUI(QWidget):
         self.tabs.addTab(self.visualize_tab, 'Visualize')
         self.tabs.addTab(self.process_tab, 'Process')
         self.tabs.addTab(self.new_tab, 'New')
+        self.tabs.currentChanged.connect(self.on_tab_changed)
         main_layout.addWidget(self.tabs)
         # --- Plot ---
         self.plot_widget = pg.PlotWidget()
@@ -97,11 +98,14 @@ class ShapeGUI(QWidget):
 
     def save_shape_dialog(self):
         from PyQt5.QtWidgets import QFileDialog
-        if self.shape is None:
+        # Save drawing_shape if in New tab, else save shape
+        in_new_tab = self.tabs.tabText(self.tabs.currentIndex()) == 'New'
+        shape_to_save = self.drawing_shape if in_new_tab else self.shape
+        if shape_to_save is None or len(shape_to_save.vertices) == 0:
             return
         path, _ = QFileDialog.getSaveFileName(self, 'Save Shape JSON', self.SHAPES_DIR, 'JSON Files (*.json)')
         if path:
-            self.shape.save_to_json(path)
+            shape_to_save.save_to_json(path)
             self.visualize_tab.refresh_shape_dropdown()
             # If nothing is loaded, select the first shape
             if self.visualize_tab.shape_dropdown.count() > 1 and self.visualize_tab.shape_dropdown.currentIndex() == 0:
@@ -109,26 +113,27 @@ class ShapeGUI(QWidget):
                 self.visualize_tab.on_dropdown_change(1)
 
     def toggle_draw_mode(self):
+        # Only toggle the mode, do not overwrite or clear drawing_shape
         self.draw_mode = not self.draw_mode
         if self.draw_mode:
             self.add_edge_mode = False
             self.new_tab.add_edge_mode_btn.setChecked(False)
-            self.drawing_shape = Shape2D()
+            if self.drawing_shape is None:
+                self.drawing_shape = Shape2D()
             self.selected_vertices = []
         else:
-            if self.drawing_shape and len(self.drawing_shape.vertices) > 0:
-                self.shape = self.drawing_shape
-            self.drawing_shape = None
+            self.selected_vertices = []
         self.update_plot()
         self.new_tab.draw_mode_btn.setChecked(self.draw_mode)
 
     def toggle_add_edge_mode(self):
+        # Only toggle the mode, do not overwrite or clear drawing_shape
         self.add_edge_mode = not self.add_edge_mode
         if self.add_edge_mode:
             self.draw_mode = False
             self.new_tab.draw_mode_btn.setChecked(False)
-            if self.shape is None:
-                self.shape = Shape2D()
+            if self.drawing_shape is None:
+                self.drawing_shape = Shape2D()
             self.selected_vertices = []
         else:
             self.selected_vertices = []
@@ -140,31 +145,74 @@ class ShapeGUI(QWidget):
         vb = self.plot_widget.getViewBox()
         mouse_point = vb.mapSceneToView(pos)
         x, y = mouse_point.x(), mouse_point.y()
-        if self.draw_mode:
+        # Use drawing_shape in New tab
+        in_new_tab = self.tabs.tabText(self.tabs.currentIndex()) == 'New'
+        shape = self.drawing_shape if in_new_tab else self.shape
+        if self.draw_mode and in_new_tab:
             # Add vertex
+            if self.drawing_shape is None:
+                self.drawing_shape = Shape2D()
             self.drawing_shape.vertices.append((x, y))
             self.update_plot()
-        elif self.add_edge_mode and self.shape is not None:
-            # Find nearest vertex
-            if len(self.shape.vertices) == 0:
+        elif self.add_edge_mode and in_new_tab and shape is not None:
+            # Find nearest vertex (use larger threshold for easier selection)
+            if len(shape.vertices) == 0:
                 return
             min_dist = float('inf')
             min_idx = -1
-            for i, (vx, vy) in enumerate(self.shape.vertices):
+            for i, (vx, vy) in enumerate(shape.vertices):
                 dist = (vx - x) ** 2 + (vy - y) ** 2
                 if dist < min_dist:
                     min_dist = dist
                     min_idx = i
-            # Only select if close enough (e.g., within 10 pixels in plot coordinates)
-            if min_dist < 0.1:  # Adjust threshold as needed
+            # Use a larger threshold (e.g., 0.25 in data coordinates)
+            if min_dist < 0.25:
                 if min_idx not in self.selected_vertices:
                     self.selected_vertices.append(min_idx)
                 if len(self.selected_vertices) == 2:
                     v0, v1 = self.selected_vertices
-                    if v0 != v1 and (v0, v1) not in self.shape.edges and (v1, v0) not in self.shape.edges:
-                        self.shape.edges.append((v0, v1))
+                    if v0 != v1 and (v0, v1) not in shape.edges and (v1, v0) not in shape.edges:
+                        shape.edges.append((v0, v1))
                     self.selected_vertices = []
                 self.update_plot()
+        elif not in_new_tab:
+            # Existing logic for other tabs (if any)
+            if self.draw_mode:
+                self.drawing_shape.vertices.append((x, y))
+                self.update_plot()
+            elif self.add_edge_mode and self.shape is not None:
+                if len(self.shape.vertices) == 0:
+                    return
+                min_dist = float('inf')
+                min_idx = -1
+                for i, (vx, vy) in enumerate(self.shape.vertices):
+                    dist = (vx - x) ** 2 + (vy - y) ** 2
+                    if dist < min_dist:
+                        min_dist = dist
+                        min_idx = i
+                if min_dist < 0.1:
+                    if min_idx not in self.selected_vertices:
+                        self.selected_vertices.append(min_idx)
+                    if len(self.selected_vertices) == 2:
+                        v0, v1 = self.selected_vertices
+                        if v0 != v1 and (v0, v1) not in self.shape.edges and (v1, v0) not in self.shape.edges:
+                            self.shape.edges.append((v0, v1))
+                        self.selected_vertices = []
+                    self.update_plot()
+
+    def on_tab_changed(self, idx):
+        # If switching to New tab, clear canvas and set default view
+        if self.tabs.tabText(idx) == 'New':
+            self.drawing_shape = Shape2D()
+            self.shape = None
+            self.selected_vertices = []
+            self.new_tab.clear_canvas_and_reset_view()
+        else:
+            # When leaving New tab, optionally set self.shape = self.drawing_shape if you want to keep the new shape
+            if self.drawing_shape and len(self.drawing_shape.vertices) > 0:
+                self.shape = self.drawing_shape
+            self.drawing_shape = None
+        self._last_tab_index = idx
 
     def update_plot(self):
         self.plot_widget.clear()
@@ -173,8 +221,13 @@ class ShapeGUI(QWidget):
         if hasattr(self, 'visualize_tab'):
             show_grid = self.visualize_tab.grid_checkbox.isChecked()
         self.plot_widget.showGrid(x=show_grid, y=show_grid, alpha=0.3 if show_grid else 0)
-        shape = self.drawing_shape if self.draw_mode else self.shape
+        # Use drawing_shape in New tab, otherwise use shape
+        if self.tabs.tabText(self.tabs.currentIndex()) == 'New':
+            shape = self.drawing_shape
+        else:
+            shape = self.shape
         if shape is None or len(shape.vertices) == 0:
+            self.new_tab.update_info()
             return
         # Draw filled polygon for simple closed shapes if option is enabled
         fill_shape = False
@@ -196,9 +249,9 @@ class ShapeGUI(QWidget):
             v0 = shape.vertices[edge[0]]
             v1 = shape.vertices[edge[1]]
             self.plot_widget.plot([v0[0], v1[0]], [v0[1], v1[1]], pen=pg.mkPen('b', width=2))
-        # Draw vertices
+        # Draw vertices (always large and red)
         xs, ys = zip(*shape.vertices)
-        self.plot_widget.plot(xs, ys, pen=None, symbol='o', symbolBrush='r', symbolSize=8)
+        self.plot_widget.plot(xs, ys, pen=None, symbol='o', symbolBrush='r', symbolSize=12)
         # Draw vertex labels if requested
         show_labels = False
         if hasattr(self, 'visualize_tab'):
@@ -213,4 +266,6 @@ class ShapeGUI(QWidget):
         if self.add_edge_mode and self.selected_vertices:
             sel_xs = [shape.vertices[i][0] for i in self.selected_vertices]
             sel_ys = [shape.vertices[i][1] for i in self.selected_vertices]
-            self.plot_widget.plot(sel_xs, sel_ys, pen=None, symbol='o', symbolBrush='g', symbolSize=14) 
+            self.plot_widget.plot(sel_xs, sel_ys, pen=None, symbol='o', symbolBrush='g', symbolSize=16)
+        # Update info label in New tab
+        self.new_tab.update_info() 
