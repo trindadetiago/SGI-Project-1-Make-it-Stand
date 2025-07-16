@@ -11,6 +11,8 @@ from .tab_new import NewTab
 from .tab_edit import EditTab
 from PyQt5.QtGui import QPolygonF, QBrush, QColor
 from PyQt5.QtCore import QPointF
+from shape_processing import scale_shape
+from shape_mass_center import calculate_center_of_mass
 
 class DataPolygonItem(pg.GraphicsObject):
     def __init__(self, vertices, viewbox, *args, **kwargs):
@@ -276,12 +278,12 @@ class ShapeGUI(QWidget):
 
     def update_plot(self):
         self.plot_widget.clear()
-        # Set grid visibility based on checkbox
         show_grid = False
+        show_com = True
         if hasattr(self, 'visualize_tab'):
             show_grid = self.visualize_tab.grid_checkbox.isChecked()
+            show_com = self.visualize_tab.com_checkbox.isChecked()
         self.plot_widget.showGrid(x=show_grid, y=show_grid, alpha=0.3 if show_grid else 0)
-        # Use drawing_shape in New tab, otherwise use shape
         if self.tabs.tabText(self.tabs.currentIndex()) == 'New':
             shape = self.drawing_shape
         else:
@@ -289,7 +291,6 @@ class ShapeGUI(QWidget):
         if shape is None or len(shape.vertices) == 0:
             self.new_tab.update_info()
             return
-        # Draw filled polygon for simple closed shapes if option is enabled
         fill_shape = False
         if hasattr(self, 'visualize_tab'):
             fill_shape = self.visualize_tab.fill_checkbox.isChecked()
@@ -298,21 +299,17 @@ class ShapeGUI(QWidget):
             if closed:
                 import numpy as np
                 pts = np.array(shape.vertices)
-                # Ensure the polygon is closed
                 if not np.allclose(pts[0], pts[-1]):
                     pts = np.vstack([pts, pts[0]])
                 x = pts[:, 0]
                 y = pts[:, 1]
                 self.plot_widget.plot(x, y, pen=pg.mkPen('blue', width=2), fillLevel=0, fillBrush=pg.mkBrush('lightblue', alpha=80))
-        # Draw edges
         for edge in shape.edges:
             v0 = shape.vertices[edge[0]]
             v1 = shape.vertices[edge[1]]
             self.plot_widget.plot([v0[0], v1[0]], [v0[1], v1[1]], pen=pg.mkPen('b', width=2))
-        # Draw vertices (always large and red)
         xs, ys = zip(*shape.vertices)
         self.plot_widget.plot(xs, ys, pen=None, symbol='o', symbolBrush='r', symbolSize=12)
-        # Draw vertex labels if requested
         show_labels = False
         if hasattr(self, 'visualize_tab'):
             show_labels = self.visualize_tab.label_checkbox.isChecked()
@@ -322,14 +319,19 @@ class ShapeGUI(QWidget):
                 text = pg.TextItem(label, anchor=(0.5, 1.5), color='k')
                 text.setPos(x, y)
                 self.plot_widget.addItem(text)
-        # Highlight selected vertices in add edge mode
+        if show_com:
+            com = calculate_center_of_mass(shape)
+            if com:
+                cx, cy = com
+                self.plot_widget.plot([cx], [cy], pen=None, symbol='+', symbolBrush='red', symbolPen='red', symbolSize=20)
+                text = pg.TextItem(text=f'CoM: ({cx:.2f}, {cy:.2f})', color='red', anchor=(0.5, 1.5))
+                text.setPos(cx, cy)
+                self.plot_widget.addItem(text)
         if self.add_edge_mode and self.selected_vertices:
             sel_xs = [shape.vertices[i][0] for i in self.selected_vertices]
             sel_ys = [shape.vertices[i][1] for i in self.selected_vertices]
             self.plot_widget.plot(sel_xs, sel_ys, pen=None, symbol='o', symbolBrush='g', symbolSize=16)
-        # Highlight selected vertex in edit mode
         if self.tabs.tabText(self.tabs.currentIndex()) == 'Edit' and self.selected_vertex is not None:
             vx, vy = shape.vertices[self.selected_vertex]
             self.plot_widget.plot([vx], [vy], pen=None, symbol='o', symbolBrush='g', symbolSize=18)
-        # Update info label in New tab
         self.new_tab.update_info() 
