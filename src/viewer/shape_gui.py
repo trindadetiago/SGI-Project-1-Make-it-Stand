@@ -7,6 +7,36 @@ from shape2d import Shape2D
 from .tab_visualize import VisualizeTab
 from .tab_process import ProcessTab
 from .tab_new import NewTab
+from PyQt5.QtGui import QPolygonF, QBrush, QColor
+from PyQt5.QtCore import QPointF
+
+class DataPolygonItem(pg.GraphicsObject):
+    def __init__(self, vertices, viewbox, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.vertices = vertices
+        self.viewbox = viewbox
+        self.brush = QBrush(QColor(100, 100, 255, 100))
+        self.setZValue(-10)  # Draw behind points/edges
+        self._polygon = QPolygonF()
+        self.update_polygon()
+        self.viewbox.sigResized.connect(self.update_polygon)
+        self.viewbox.sigRangeChanged.connect(self.update_polygon)
+
+    def update_polygon(self, *args):
+        if not self.vertices:
+            return
+        pts = [self.viewbox.mapViewToScene(QPointF(x, y)) for x, y in self.vertices]
+        self._polygon = QPolygonF(pts)
+        self.update()
+
+    def paint(self, p, *args):
+        if not self._polygon.isEmpty():
+            p.setBrush(self.brush)
+            p.setPen(QColor(0,0,0,0))
+            p.drawPolygon(self._polygon)
+
+    def boundingRect(self):
+        return self._polygon.boundingRect()
 
 class ShapeGUI(QWidget):
     SHAPES_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'shapes')
@@ -19,6 +49,7 @@ class ShapeGUI(QWidget):
         self.draw_mode = False
         self.add_edge_mode = False
         self.selected_vertices = []  # For edge creation
+        self._fill_item = None
         self.init_ui()
 
     def init_ui(self):
@@ -34,6 +65,7 @@ class ShapeGUI(QWidget):
         # --- Plot ---
         self.plot_widget = pg.PlotWidget()
         self.plot_widget.setBackground('w')
+        self.plot_widget.setAspectLocked(True)  # Lock aspect ratio
         self.plot_widget.scene().sigMouseClicked.connect(self.on_plot_click)
         main_layout.addWidget(self.plot_widget)
         self.setLayout(main_layout)
@@ -136,9 +168,29 @@ class ShapeGUI(QWidget):
 
     def update_plot(self):
         self.plot_widget.clear()
+        # Set grid visibility based on checkbox
+        show_grid = False
+        if hasattr(self, 'visualize_tab'):
+            show_grid = self.visualize_tab.grid_checkbox.isChecked()
+        self.plot_widget.showGrid(x=show_grid, y=show_grid, alpha=0.3 if show_grid else 0)
         shape = self.drawing_shape if self.draw_mode else self.shape
         if shape is None or len(shape.vertices) == 0:
             return
+        # Draw filled polygon for simple closed shapes if option is enabled
+        fill_shape = False
+        if hasattr(self, 'visualize_tab'):
+            fill_shape = self.visualize_tab.fill_checkbox.isChecked()
+        if fill_shape and len(shape.vertices) >= 3:
+            closed = all((i, (i+1)%len(shape.vertices)) in shape.edges or ((i+1)%len(shape.vertices), i) in shape.edges for i in range(len(shape.vertices)))
+            if closed:
+                import numpy as np
+                pts = np.array(shape.vertices)
+                # Ensure the polygon is closed
+                if not np.allclose(pts[0], pts[-1]):
+                    pts = np.vstack([pts, pts[0]])
+                x = pts[:, 0]
+                y = pts[:, 1]
+                self.plot_widget.plot(x, y, pen=pg.mkPen('blue', width=2), fillLevel=0, fillBrush=pg.mkBrush('lightblue', alpha=80))
         # Draw edges
         for edge in shape.edges:
             v0 = shape.vertices[edge[0]]
@@ -147,6 +199,16 @@ class ShapeGUI(QWidget):
         # Draw vertices
         xs, ys = zip(*shape.vertices)
         self.plot_widget.plot(xs, ys, pen=None, symbol='o', symbolBrush='r', symbolSize=8)
+        # Draw vertex labels if requested
+        show_labels = False
+        if hasattr(self, 'visualize_tab'):
+            show_labels = self.visualize_tab.label_checkbox.isChecked()
+        if show_labels:
+            for i, (x, y) in enumerate(shape.vertices):
+                label = f"v{i+1}"
+                text = pg.TextItem(label, anchor=(0.5, 1.5), color='k')
+                text.setPos(x, y)
+                self.plot_widget.addItem(text)
         # Highlight selected vertices in add edge mode
         if self.add_edge_mode and self.selected_vertices:
             sel_xs = [shape.vertices[i][0] for i in self.selected_vertices]
