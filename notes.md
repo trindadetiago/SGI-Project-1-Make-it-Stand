@@ -13,6 +13,7 @@ We need to define a function `f` that if we minimize it we achieved diferent obj
 Let's get to it.
 
 ## Stabilization thanks to carving
+This one is the most complicated. As we see in the first image, we have the shape we want to stabilize and a blue line given by its equation, aka two variables, `y=bx+c`
 
 ![carving1](assets/carving1.png)
 ![carving2](assets/carving2.png)
@@ -21,10 +22,15 @@ Let's get to it.
 
 ## Smoothing the surface
 As you can see in the drawing, the idea of smoothing the surface is to take every three consecutive vertices (the orange or yellow ones) `v_0, v_1 ,v_2`, compute the midpoint of `v_0` and `v_2` (the blue point `v_{02}`), and calculate its distance to point `v_1` (the purple segment). By minimizing this distance for each triplets, we eliminate isolated spikes from the surface.
+
 ![smoothing](assets/smoothing.png)
+
 And the function is this one, adding up all the consecutive triplets
+
 $$f_2(V)=\sum_{v0,v1,v2\in V} \frac{1}{2}\left\|\left\|v_1-\frac{1}{2}\left(v_0+v_2\right)\right\|\right\|^2$$
+
 A kind off pseudocode for this will be:
+
 ```python
 def f2(V,E):
  inicialice f2=0
@@ -43,16 +49,25 @@ def f2(V,E):
     define the point v02
     calculate the distance between v1 and v02
     f2 += 1/2 of that distance squared
-return f2
-
+ return f2
 ```
 
 
 ## Similarity to the initial surface
+The drawing makes it clear. We want the shape we're modifying, `x=V'`, to resemble the original shape, `x_0=V`. To do that, since both have the same number of points in the same order, we calculate the distance between each pair of corresponding points (shown in orange) to minimize it. This way, we ensure that our algorithm doesn’t produce a shape that’s different from the original.
 
 ![Similarity](assets/Similarity.png)
 
+And the function is this one, With `V'` being the shape we want to compare with the original `V`.
+
+$$f_3(V')= \frac{1}{2}\left\|\left\|V'-V\right\|\right\|^2$$
+
+A kind off pseudocode for this will be:
 
 ```python
->>> x = x / np.linalg.norm(x)
+def f3(V,E,V_og):
+ calculate the difference D=V-V_og
+ compute the norm np.linalg.norm(D, ord=2)
+ f3 = 1/2 of the norm
+ return f3
 ```
