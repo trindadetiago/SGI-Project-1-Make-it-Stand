@@ -1,0 +1,6 @@
+mesh spheres.obj
+mesh_rotation 1 0 0 0
+flatten_threshold 0.005
+vertex_handle 0.495622 0.769074 0.255042
+vertex_handle 0.496603  0.28144 0.830463
+vertex_handle 0.495881 0.44194 0.53804

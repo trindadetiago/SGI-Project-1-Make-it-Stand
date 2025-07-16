@@ -1,6 +1,0 @@
-mesh horse.obj
-mesh_rotation -0.0400216 -0.973799 -0.0606775 0.215482
-flatten_threshold 0.015
-vertex_handle 0.140429 0.806855 0.547478
-vertex_handle  0.35995 0.556033 0.511785
-vertex_handle 0.646891 0.348607 0.495067

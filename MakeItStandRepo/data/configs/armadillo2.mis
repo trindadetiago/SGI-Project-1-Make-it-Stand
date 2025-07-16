@@ -1,6 +1,0 @@
-mesh armadillo2.obj
-mesh_rotation 0.977529 -0.0766475 0.16607 -0.104799
-flatten_threshold 0.02
-vertex_handle 0.631706 0.30486 0.45979
-vertex_handle 0.509665 0.665689 0.445574
-vertex_handle 0.452672 0.369984 0.469078
