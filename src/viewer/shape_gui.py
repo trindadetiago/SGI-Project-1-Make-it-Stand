@@ -51,7 +51,7 @@ class ShapeGUI(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('2D Shape Framework')
+        self.setWindowTitle('Make It Stand: 2D - SGI')
         self.resize(1200, 800)  # Larger default window size
         self.shape = None
         self.drawing_shape = None  # Used in draw mode
