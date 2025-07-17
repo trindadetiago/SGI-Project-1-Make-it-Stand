@@ -81,27 +81,3 @@ def gradient_descent(f, V0, lr=0.01, tol=1e-6, max_iters=1000, verbose=False):
         except Exception as e:
             pass
     return V.detach()
-
-# --- Example usage/test function ---
-def test_shape_optimization():
-    import os
-    shape_path = os.path.join(os.path.dirname(__file__), '..', 'shapes', 'square.json')
-    shape = Shape2D.load_from_json(shape_path)
-    V_og = shape.vertices
-    E = torch.tensor(shape.edges, dtype=torch.long, device=V_og.device)
-    torch.manual_seed(42)
-    V0 = V_og + 0.2 * torch.randn_like(V_og)
-    def loss_fn(V):
-        return total_loss(V, E, V_og, lambda1=0.33, lambda2=0.33, lambda3=0.34)
-    V_opt = gradient_descent(loss_fn, V0, lr=0.05, max_iters=10000, verbose=True)
-    print("Original vertices:\n", V_og)
-    print("Initial (perturbed) vertices:\n", V0)
-    print("Optimized vertices:\n", V_opt)
-    optimized_shape = Shape2D(V_opt, shape.edges.copy())
-    out_path = os.path.join(os.path.dirname(__file__), '..', 'shapes', 'square_optimized.json')
-    optimized_shape.save_to_json(out_path)
-    print(f"Optimized shape saved to {out_path}")
-    return V_og, V0, V_opt
-
-if __name__ == "__main__":
-    test_shape_optimization() 
