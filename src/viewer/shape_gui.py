@@ -173,6 +173,8 @@ class ShapeGUI(QWidget):
             self.new_tab.clear_canvas_and_reset_view()
         elif tab_name == 'Compare':
             self.compare_tab.refresh_shape_dropdowns()
+        elif tab_name == 'Optimization':
+            self.optimization_tab.plot_current_shape()
         else:
             if self.drawing_shape and len(self.drawing_shape.vertices) > 0:
                 self.shape = self.drawing_shape

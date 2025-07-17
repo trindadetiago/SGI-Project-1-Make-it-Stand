@@ -9,6 +9,7 @@ class OptimizationTab(QWidget):
         super().__init__()
         self.main_window = main_window
         self.init_ui()
+        self.plot_current_shape()  # Show the current shape on tab open
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -32,6 +33,41 @@ class OptimizationTab(QWidget):
         layout.addLayout(plot_layout)
         self.setLayout(layout)
 
+    def plot_current_shape(self):
+        shape = self.main_window.shape
+        self.before_plot.clear()
+        if shape is None or len(shape.vertices) < 2:
+            self.before_plot.setTitle("Before Optimization")
+            return
+        V = shape.vertices
+        E = shape.edges
+        # Plot edges
+        for i, j in E:
+            self.before_plot.plot(
+                [V[i, 0].item(), V[j, 0].item()],
+                [V[i, 1].item(), V[j, 1].item()],
+                pen=pg.mkPen('b', width=2)
+            )
+        self.before_plot.plot(V[:,0].cpu().numpy(), V[:,1].cpu().numpy(), pen=None, symbol='o', symbolBrush='r', symbolSize=10)
+        self.before_plot.setTitle("Before Optimization")
+        # Center of Mass and Stability
+        try:
+            from shape_mass_center import calculate_center_of_mass
+            from shape_stability import is_shape_stable
+            E_tensor = torch.tensor(E, dtype=torch.long, device=V.device)
+            area_b, com_b = calculate_center_of_mass(V, E_tensor)
+            cx_b, cy_b = float(com_b[0].item()), float(com_b[1].item())
+            self.before_plot.plot([cx_b], [cy_b], pen=None, symbol='+', symbolBrush='red', symbolPen='red', symbolSize=20)
+            is_stable_b, _, _, _ = is_shape_stable(V, E_tensor)
+            if is_stable_b:
+                stability_text_b = pg.TextItem(text='Stable', color='green', anchor=(0.5, -0.5))
+            else:
+                stability_text_b = pg.TextItem(text='Will fall!', color='red', anchor=(0.5, -0.5))
+            stability_text_b.setPos(cx_b, cy_b)
+            self.before_plot.addItem(stability_text_b)
+        except Exception as e:
+            pass
+
     def run_optimization(self):
         shape = self.main_window.shape
         if shape is None or len(shape.vertices) < 3 or len(shape.edges) < 3:
@@ -52,31 +88,7 @@ class OptimizationTab(QWidget):
             self.info_label.setText("Optimization failed: NaN encountered in result.")
             return
         # Plot before (edges)
-        self.before_plot.clear()
-        for i, j in shape.edges:
-            self.before_plot.plot(
-                [V0[i, 0].item(), V0[j, 0].item()],
-                [V0[i, 1].item(), V0[j, 1].item()],
-                pen=pg.mkPen('b', width=2)
-            )
-        self.before_plot.plot(V0[:,0].cpu().numpy(), V0[:,1].cpu().numpy(), pen=None, symbol='o', symbolBrush='r', symbolSize=10)
-        self.before_plot.setTitle("Before Optimization")
-        # --- Center of Mass and Stability (Before) ---
-        try:
-            from shape_mass_center import calculate_center_of_mass
-            from shape_stability import is_shape_stable
-            area_b, com_b = calculate_center_of_mass(V0, E)
-            cx_b, cy_b = float(com_b[0].item()), float(com_b[1].item())
-            self.before_plot.plot([cx_b], [cy_b], pen=None, symbol='+', symbolBrush='red', symbolPen='red', symbolSize=20)
-            is_stable_b, _, _, _ = is_shape_stable(V0, E)
-            if is_stable_b:
-                stability_text_b = pg.TextItem(text='Stable', color='green', anchor=(0.5, -0.5))
-            else:
-                stability_text_b = pg.TextItem(text='Will fall!', color='red', anchor=(0.5, -0.5))
-            stability_text_b.setPos(cx_b, cy_b)
-            self.before_plot.addItem(stability_text_b)
-        except Exception as e:
-            pass
+        self.plot_current_shape()
         # Plot after (edges)
         self.after_plot.clear()
         for i, j in shape.edges:
@@ -89,6 +101,8 @@ class OptimizationTab(QWidget):
         self.after_plot.setTitle("After Optimization")
         # --- Center of Mass and Stability (After) ---
         try:
+            from shape_mass_center import calculate_center_of_mass
+            from shape_stability import is_shape_stable
             area_a, com_a = calculate_center_of_mass(V_opt, E)
             cx_a, cy_a = float(com_a[0].item()), float(com_a[1].item())
             self.after_plot.plot([cx_a], [cy_a], pen=None, symbol='+', symbolBrush='red', symbolPen='red', symbolSize=20)
