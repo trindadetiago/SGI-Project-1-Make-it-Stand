@@ -1,11 +1,13 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFileDialog, QLabel
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QFileDialog, QLabel
+import pyqtgraph as pg
+from .custom_viewbox import CustomViewBox
 import os
 
 class NewTab(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        layout = QHBoxLayout()
+        controls_layout = QHBoxLayout()
         self.draw_mode_btn = QPushButton('Add Vertices')
         self.add_edge_mode_btn = QPushButton('Add Edges')
         self.save_btn = QPushButton('Save Shape')
@@ -15,11 +17,22 @@ class NewTab(QWidget):
         self.draw_mode_btn.clicked.connect(self.toggle_draw_mode)
         self.add_edge_mode_btn.clicked.connect(self.toggle_add_edge_mode)
         self.save_btn.clicked.connect(self.save_shape)
-        layout.addWidget(self.draw_mode_btn)
-        layout.addWidget(self.add_edge_mode_btn)
-        layout.addWidget(self.save_btn)
-        layout.addWidget(self.info_label)
-        self.setLayout(layout)
+        controls_layout.addWidget(self.draw_mode_btn)
+        controls_layout.addWidget(self.add_edge_mode_btn)
+        controls_layout.addWidget(self.save_btn)
+        controls_layout.addWidget(self.info_label)
+        # Plot widget
+        self.plot_widget = pg.PlotWidget(viewBox=CustomViewBox(self.main_window))
+        self.plot_widget.setBackground('w')
+        self.plot_widget.setAspectLocked(True)
+        self.plot_widget.setMinimumHeight(600)
+        self.plot_widget.setMinimumWidth(900)
+        self.plot_widget.scene().sigMouseClicked.connect(self.main_window.on_plot_click)
+        # Main layout
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(controls_layout)
+        main_layout.addWidget(self.plot_widget, stretch=1)
+        self.setLayout(main_layout)
         self.update_info()
 
     def toggle_draw_mode(self):
