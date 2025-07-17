@@ -201,9 +201,14 @@ class ShapeGUI(QWidget):
         if self.draw_mode and in_new_tab:
             if self.drawing_shape is None:
                 self.drawing_shape = Shape2D()
+            # Snap to y=0 if close
+            snap_threshold = 0.05
+            if abs(y) < snap_threshold:
+                y = 0.0
             new_vertex = torch.tensor([[x, y]], dtype=self.drawing_shape.vertices.dtype)
             self.drawing_shape.vertices = torch.cat([self.drawing_shape.vertices, new_vertex], dim=0)
             self.update_plot()
+            return
         elif self.add_edge_mode and in_new_tab and shape is not None:
             if len(shape.vertices) == 0:
                 return
@@ -273,6 +278,11 @@ class ShapeGUI(QWidget):
         if plot_widget is None:
             return
         plot_widget.clear()
+        # For New tab, always show grid and y=0 line
+        if self.tabs.tabText(self.tabs.currentIndex()) == 'New':
+            plot_widget.showGrid(x=True, y=True, alpha=0.3)
+            y0_line = pg.InfiniteLine(pos=0, angle=0, pen=pg.mkPen('orange', width=2))
+            plot_widget.addItem(y0_line)
         show_grid = False
         show_com = True
         if hasattr(self, 'visualize_tab'):
