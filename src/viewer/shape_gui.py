@@ -15,6 +15,7 @@ from PyQt5.QtCore import QPointF
 from shape_processing import scale_shape
 from shape_mass_center import calculate_center_of_mass
 import torch
+from .tab_optimization import OptimizationTab
 
 class DataPolygonItem(pg.GraphicsObject):
     def __init__(self, vertices, viewbox, *args, **kwargs):
@@ -95,11 +96,13 @@ class ShapeGUI(QWidget):
         self.new_tab = NewTab(self)
         self.edit_tab = EditTab(self)
         self.compare_tab = CompareTab(self)
+        self.optimization_tab = OptimizationTab(self)
         self.tabs.addTab(self.visualize_tab, 'Visualize')
         self.tabs.addTab(self.process_tab, 'Process')
         self.tabs.addTab(self.new_tab, 'New')
         self.tabs.addTab(self.edit_tab, 'Edit')
         self.tabs.addTab(self.compare_tab, 'Compare')
+        self.tabs.addTab(self.optimization_tab, 'Optimization')
         self.tabs.currentChanged.connect(self.on_tab_changed)
         main_layout.addWidget(self.tabs)
         # --- Plot ---
