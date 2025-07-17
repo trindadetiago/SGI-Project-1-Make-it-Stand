@@ -229,7 +229,7 @@ class ShapeGUI(QWidget):
                     self.selected_vertices = []
                 self.update_plot()
         elif in_edit_tab and shape is not None:
-            # Select a vertex for dragging
+            # Select a vertex or edge for dragging or editing
             min_dist = float('inf')
             min_idx = -1
             for i, (vx, vy) in enumerate(shape.vertices):
@@ -237,13 +237,33 @@ class ShapeGUI(QWidget):
                 if dist < min_dist:
                     min_dist = dist
                     min_idx = i
-            if min_dist < 0.25:
+            # Edge selection logic
+            edge_threshold = 0.15
+            closest_edge = None
+            closest_edge_dist = float('inf')
+            for edge in shape.edges:
+                i, j = edge
+                v0 = shape.vertices[i]
+                v1 = shape.vertices[j]
+                mx = (v0[0] + v1[0]) / 2
+                my = (v0[1] + v1[1]) / 2
+                dist = (mx - x) ** 2 + (my - y) ** 2
+                if dist < closest_edge_dist:
+                    closest_edge_dist = dist
+                    closest_edge = edge
+            # Prefer edge if closer to edge than to any vertex
+            if closest_edge is not None and closest_edge_dist < edge_threshold and closest_edge_dist < min_dist:
+                self.selected_vertex = None
+                self.edit_tab.set_selected_edge(closest_edge)
+            elif min_dist < 0.25:
                 self.selected_vertex = min_idx
                 self.edit_tab.set_selected_vertex(min_idx)
+                self.edit_tab.clear_selected_edge()
                 self._dragging_vertex = True
             else:
                 self.selected_vertex = None
                 self.edit_tab.set_selected_vertex(None)
+                self.edit_tab.clear_selected_edge()
             self.update_plot()
             self._dragging_vertex = False  # End dragging on click
         elif not in_new_tab:
@@ -312,6 +332,12 @@ class ShapeGUI(QWidget):
                 x = pts[:, 0]
                 y = pts[:, 1]
                 plot_widget.plot(x, y, pen=pg.mkPen('blue', width=2), fillLevel=0, fillBrush=pg.mkBrush('lightblue', alpha=80))
+        # Highlight selected edge if in Edit tab
+        if self.tabs.tabText(self.tabs.currentIndex()) == 'Edit' and hasattr(self.edit_tab, 'selected_edge') and self.edit_tab.selected_edge is not None:
+            i, j = self.edit_tab.selected_edge
+            v0 = shape.vertices[i]
+            v1 = shape.vertices[j]
+            plot_widget.plot([v0[0], v1[0]], [v0[1], v1[1]], pen=pg.mkPen('g', width=4))
         for edge in shape.edges:
             v0 = shape.vertices[edge[0]]
             v1 = shape.vertices[edge[1]]
