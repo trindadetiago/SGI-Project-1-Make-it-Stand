@@ -114,3 +114,23 @@ area, com = get_center_of_mass_from_mesh(donut_vertices, donut_edges)
 # Expected CoM = [2.0, 2.0] due to symmetry
 print(f"Donut Area: {area:.4f}")
 print(f"Donut Center of Mass: {np.round(com, 4)}")
+
+
+# 2. Jorge's case
+print("\n## Testing with an Hourglass Shape ##")
+hourglass_vertices = [
+    [-2, 0], [-2, 2], [0, 2], [0, 0],
+    [2, 0], [2, -2], [0, -2]
+]
+
+hourglass_edges = [
+    [0, 1], [1, 2], [2, 3], [3, 0],
+    [3, 4], [4, 5], [5, 6], [6, 3]
+]
+
+area, com = get_center_of_mass_from_mesh(hourglass_vertices, hourglass_edges)
+
+# Expected area = 2*2 + 2*2 = 8
+# Expected CoM = [0.0, 0.0] due to symmetry
+print(f"Hourglass Area: {area:.4f}")
+print(f"Hourglass Center of Mass: {np.round(com, 4)}")
