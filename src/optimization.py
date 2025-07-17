@@ -4,10 +4,20 @@ from shape_smoothing import calculate_smoothing_score
 from shape_similarity import calculate_shape_similarity
 from shape_mass_center import calculate_center_of_mass
 
-def f1(V: torch.Tensor, E: torch.Tensor, support_y=0.0) -> torch.Tensor:
-    support_mask = torch.isclose(V[:, 1], torch.tensor(support_y, dtype=V.dtype, device=V.device))
+def f1(V: torch.Tensor, E: torch.Tensor, support_y=None) -> torch.Tensor:
+    # Use the lowest y as the support if not specified
+    if support_y is None:
+        min_y = V[:, 1].min()
+        tol = 1e-3
+        support_mask = torch.abs(V[:, 1] - min_y) < tol
+    else:
+        tol = 1e-6
+        support_mask = torch.isclose(V[:, 1], torch.tensor(support_y, dtype=V.dtype, device=V.device), atol=tol)
+    if support_mask.sum() == 0:
+        # If still no support, just use the lowest y vertex
+        support_mask = (V[:, 1] == V[:, 1].min())
     c_star_x = V[support_mask, 0].mean()
-    _, com = calculate_center_of_mass(V, E)
+    area, com = calculate_center_of_mass(V, E)
     return 0.5 * (com[0] - c_star_x) ** 2
 
 def f2(V: torch.Tensor) -> torch.Tensor:

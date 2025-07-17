@@ -40,6 +40,14 @@ class OptimizationTab(QWidget):
         def loss_fn(V):
             return total_loss(V, E, V_og, lambda1=0.33, lambda2=0.33, lambda3=0.34)
         V_opt = gradient_descent(loss_fn, V0, lr=0.05, max_iters=1000, verbose=False)
+        # Logging for debugging
+        print("V_opt after optimization:", V_opt)
+        print("Any NaN in V_opt?", torch.isnan(V_opt).any().item())
+        final_loss = loss_fn(V_opt)
+        print("Final loss:", final_loss.item())
+        if torch.isnan(V_opt).any():
+            self.info_label.setText("Optimization failed: NaN encountered in result.")
+            return
         # Plot before (edges)
         self.before_plot.clear()
         for i, j in shape.edges:
