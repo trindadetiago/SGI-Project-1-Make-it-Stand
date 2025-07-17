@@ -24,8 +24,11 @@ class OptimizationTab(QWidget):
         self.after_plot.setBackground('w')
         self.before_plot.setAspectLocked(True)
         self.after_plot.setAspectLocked(True)
-        plot_layout.addWidget(self.before_plot)
-        plot_layout.addWidget(self.after_plot)
+        # Make plots bigger
+        self.before_plot.setMinimumSize(500, 500)
+        self.after_plot.setMinimumSize(500, 500)
+        plot_layout.addWidget(self.before_plot, stretch=1)
+        plot_layout.addWidget(self.after_plot, stretch=1)
         layout.addLayout(plot_layout)
         self.setLayout(layout)
 

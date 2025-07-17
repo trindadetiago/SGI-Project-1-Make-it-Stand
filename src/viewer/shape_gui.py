@@ -78,6 +78,7 @@ class ShapeGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('2D Shape Framework')
+        self.resize(1200, 800)  # Larger default window size
         self.shape = None
         self.drawing_shape = None  # Used in draw mode
         self.draw_mode = False
@@ -110,10 +111,16 @@ class ShapeGUI(QWidget):
         self.plot_widget.setBackground('w')
         self.plot_widget.setAspectLocked(True)  # Lock aspect ratio
         self.plot_widget.scene().sigMouseClicked.connect(self.on_plot_click)
+        # Make the plot area bigger
+        self.plot_widget.setMinimumHeight(600)
+        self.plot_widget.setMinimumWidth(900)
         # Removed sigMouseMoved connection
-        main_layout.addWidget(self.plot_widget)
+        main_layout.addWidget(self.plot_widget, stretch=2)
         self.setLayout(main_layout)
         self._dragging_vertex = False
+        # Reduce margins for a cleaner look
+        main_layout.setContentsMargins(8, 8, 8, 8)
+        main_layout.setSpacing(8)
 
     def showEvent(self, event):
         self.visualize_tab.refresh_shape_dropdown()
@@ -348,4 +355,4 @@ class ShapeGUI(QWidget):
         if self.tabs.tabText(self.tabs.currentIndex()) == 'Edit' and self.selected_vertex is not None:
             vx, vy = shape.vertices[self.selected_vertex]
             self.plot_widget.plot([vx], [vy], pen=None, symbol='o', symbolBrush='g', symbolSize=18)
-        self.new_tab.update_info() 
+        self.new_tab.update_info()
