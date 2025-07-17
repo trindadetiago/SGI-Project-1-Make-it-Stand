@@ -1,4 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QComboBox
+import pyqtgraph as pg
+from .custom_viewbox import CustomViewBox
 from shape2d import Shape2D
 from shape_similarity import calculate_shape_similarity
 import os
@@ -36,6 +38,14 @@ class CompareTab(QWidget):
         # Result label
         self.result_label = QLabel('Similarity: -')
         layout.addWidget(self.result_label)
+        # Plot widget
+        self.plot_widget = pg.PlotWidget(viewBox=CustomViewBox(self.main_window))
+        self.plot_widget.setBackground('w')
+        self.plot_widget.setAspectLocked(True)
+        self.plot_widget.setMinimumHeight(600)
+        self.plot_widget.setMinimumWidth(900)
+        self.plot_widget.scene().sigMouseClicked.connect(self.main_window.on_plot_click)
+        layout.addWidget(self.plot_widget, stretch=1)
         self.setLayout(layout)
         self.refresh_shape_dropdowns()
 

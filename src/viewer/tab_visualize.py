@@ -1,11 +1,14 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QComboBox, QPushButton, QCheckBox
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QComboBox, QPushButton, QCheckBox
 import os
+import pyqtgraph as pg
+from .custom_viewbox import CustomViewBox
 
 class VisualizeTab(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        layout = QHBoxLayout()
+        # Controls layout
+        controls_layout = QHBoxLayout()
         self.shape_dropdown = QComboBox()
         self.shape_dropdown.addItem('Select shape from folder...')
         self.shape_dropdown.currentIndexChanged.connect(self.on_dropdown_change)
@@ -20,13 +23,24 @@ class VisualizeTab(QWidget):
         self.com_checkbox = QCheckBox('Show Center of Mass')
         self.com_checkbox.setChecked(True)
         self.com_checkbox.stateChanged.connect(self.on_option_change)
-        layout.addWidget(self.shape_dropdown)
-        layout.addWidget(self.load_btn)
-        layout.addWidget(self.label_checkbox)
-        layout.addWidget(self.fill_checkbox)
-        layout.addWidget(self.grid_checkbox)
-        layout.addWidget(self.com_checkbox)
-        self.setLayout(layout)
+        controls_layout.addWidget(self.shape_dropdown)
+        controls_layout.addWidget(self.load_btn)
+        controls_layout.addWidget(self.label_checkbox)
+        controls_layout.addWidget(self.fill_checkbox)
+        controls_layout.addWidget(self.grid_checkbox)
+        controls_layout.addWidget(self.com_checkbox)
+        # Plot widget
+        self.plot_widget = pg.PlotWidget(viewBox=CustomViewBox(self.main_window))
+        self.plot_widget.setBackground('w')
+        self.plot_widget.setAspectLocked(True)
+        self.plot_widget.setMinimumHeight(600)
+        self.plot_widget.setMinimumWidth(900)
+        self.plot_widget.scene().sigMouseClicked.connect(self.main_window.on_plot_click)
+        # Main layout
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(controls_layout)
+        main_layout.addWidget(self.plot_widget, stretch=1)
+        self.setLayout(main_layout)
         self.refresh_shape_dropdown()
         self.label_checkbox.setChecked(False)
         self.fill_checkbox.setChecked(False)

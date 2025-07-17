@@ -1,4 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QInputDialog, QMessageBox
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QInputDialog, QMessageBox
+import pyqtgraph as pg
+from .custom_viewbox import CustomViewBox
 from shape_processing import scale_shape
 from shape_smoothing import smooth_shape, calculate_smoothing_score
 from shape2d import Shape2D
@@ -7,7 +9,7 @@ class ProcessTab(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        layout = QHBoxLayout()
+        controls_layout = QHBoxLayout()
         self.scale_btn = QPushButton('Scale Shape')
         self.scale_btn.clicked.connect(self.scale_shape)
         self.smooth_btn = QPushButton('Smooth Shape')
@@ -16,11 +18,22 @@ class ProcessTab(QWidget):
         self.smoothing_score_btn.clicked.connect(self.show_smoothing_score)
         self.save_btn = QPushButton('Save Shape')
         self.save_btn.clicked.connect(self.save_shape)
-        layout.addWidget(self.scale_btn)
-        layout.addWidget(self.smooth_btn)
-        layout.addWidget(self.smoothing_score_btn)
-        layout.addWidget(self.save_btn)
-        self.setLayout(layout)
+        controls_layout.addWidget(self.scale_btn)
+        controls_layout.addWidget(self.smooth_btn)
+        controls_layout.addWidget(self.smoothing_score_btn)
+        controls_layout.addWidget(self.save_btn)
+        # Plot widget
+        self.plot_widget = pg.PlotWidget(viewBox=CustomViewBox(self.main_window))
+        self.plot_widget.setBackground('w')
+        self.plot_widget.setAspectLocked(True)
+        self.plot_widget.setMinimumHeight(600)
+        self.plot_widget.setMinimumWidth(900)
+        self.plot_widget.scene().sigMouseClicked.connect(self.main_window.on_plot_click)
+        # Main layout
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(controls_layout)
+        main_layout.addWidget(self.plot_widget, stretch=1)
+        self.setLayout(main_layout)
 
     def scale_shape(self):
         if self.main_window.shape is None:

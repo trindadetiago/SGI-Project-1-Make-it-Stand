@@ -1,10 +1,12 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton
+import pyqtgraph as pg
+from .custom_viewbox import CustomViewBox
 
 class EditTab(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        layout = QHBoxLayout()
+        controls_layout = QHBoxLayout()
         self.info_label = QLabel('Selected Vertex: None')
         self.deselect_btn = QPushButton('Deselect')
         self.deselect_btn.clicked.connect(self.deselect_vertex)
@@ -12,11 +14,22 @@ class EditTab(QWidget):
         self.save_overwrite_btn.clicked.connect(self.save_overwrite)
         self.save_new_btn = QPushButton('Save As New')
         self.save_new_btn.clicked.connect(self.save_as_new)
-        layout.addWidget(self.info_label)
-        layout.addWidget(self.deselect_btn)
-        layout.addWidget(self.save_overwrite_btn)
-        layout.addWidget(self.save_new_btn)
-        self.setLayout(layout)
+        controls_layout.addWidget(self.info_label)
+        controls_layout.addWidget(self.deselect_btn)
+        controls_layout.addWidget(self.save_overwrite_btn)
+        controls_layout.addWidget(self.save_new_btn)
+        # Plot widget
+        self.plot_widget = pg.PlotWidget(viewBox=CustomViewBox(self.main_window))
+        self.plot_widget.setBackground('w')
+        self.plot_widget.setAspectLocked(True)
+        self.plot_widget.setMinimumHeight(600)
+        self.plot_widget.setMinimumWidth(900)
+        self.plot_widget.scene().sigMouseClicked.connect(self.main_window.on_plot_click)
+        # Main layout
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(controls_layout)
+        main_layout.addWidget(self.plot_widget, stretch=1)
+        self.setLayout(main_layout)
         self.selected_vertex = None
         self.update_save_button()
 

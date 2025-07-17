@@ -16,6 +16,7 @@ from shape_processing import scale_shape
 from shape_mass_center import calculate_center_of_mass
 import torch
 from .tab_optimization import OptimizationTab
+from .custom_viewbox import CustomViewBox
 
 class DataPolygonItem(pg.GraphicsObject):
     def __init__(self, vertices, viewbox, *args, **kwargs):
@@ -44,33 +45,6 @@ class DataPolygonItem(pg.GraphicsObject):
 
     def boundingRect(self):
         return self._polygon.boundingRect()
-
-class CustomViewBox(pg.ViewBox):
-    def __init__(self, main_window, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.main_window = main_window
-        self.setMouseMode(self.PanMode)
-        self._dragging_vertex = False
-
-    def mouseClickEvent(self, ev):
-        # Let the main window handle selection
-        super().mouseClickEvent(ev)
-
-    def mouseDragEvent(self, ev, axis=None):
-        if self.main_window.tabs.tabText(self.main_window.tabs.currentIndex()) == 'Edit' and \
-           self.main_window.selected_vertex is not None:
-            if ev.button() == Qt.LeftButton:
-                pos = ev.pos()
-                x, y = self.mapSceneToView(pos).x(), self.mapSceneToView(pos).y()
-                shape = self.main_window.shape
-                idx = self.main_window.selected_vertex
-                if shape and 0 <= idx < len(shape.vertices):
-                    shape.vertices[idx] = torch.tensor([x, y], dtype=shape.vertices.dtype)
-                    self.main_window.update_plot()
-                ev.accept()
-                return
-        # Otherwise, default panning/zooming
-        super().mouseDragEvent(ev, axis=axis)
 
 class ShapeGUI(QWidget):
     SHAPES_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'shapes')
@@ -106,16 +80,7 @@ class ShapeGUI(QWidget):
         self.tabs.addTab(self.optimization_tab, 'Optimization')
         self.tabs.currentChanged.connect(self.on_tab_changed)
         main_layout.addWidget(self.tabs)
-        # --- Plot ---
-        self.plot_widget = pg.PlotWidget(viewBox=CustomViewBox(self))
-        self.plot_widget.setBackground('w')
-        self.plot_widget.setAspectLocked(True)  # Lock aspect ratio
-        self.plot_widget.scene().sigMouseClicked.connect(self.on_plot_click)
-        # Make the plot area bigger
-        self.plot_widget.setMinimumHeight(600)
-        self.plot_widget.setMinimumWidth(900)
-        # Removed sigMouseMoved connection
-        main_layout.addWidget(self.plot_widget, stretch=2)
+        # Remove global plot_widget from here
         self.setLayout(main_layout)
         self._dragging_vertex = False
         # Reduce margins for a cleaner look
@@ -201,27 +166,31 @@ class ShapeGUI(QWidget):
         self.new_tab.add_edge_mode_btn.setChecked(self.add_edge_mode)
 
     def on_tab_changed(self, idx):
-        # If switching to New tab, clear canvas and set default view
-        if self.tabs.tabText(idx) == 'New':
+        tab_name = self.tabs.tabText(idx)
+        if tab_name == 'New':
             self.drawing_shape = Shape2D()
-            self.shape = None
             self.selected_vertices = []
             self.new_tab.clear_canvas_and_reset_view()
-        elif self.tabs.tabText(idx) == 'Compare':
+        elif tab_name == 'Compare':
             self.compare_tab.refresh_shape_dropdowns()
         else:
-            # When leaving New tab, optionally set self.shape = self.drawing_shape if you want to keep the new shape
             if self.drawing_shape and len(self.drawing_shape.vertices) > 0:
                 self.shape = self.drawing_shape
             self.drawing_shape = None
-        if self.tabs.tabText(idx) == 'Edit':
+        if tab_name == 'Edit':
             self.selected_vertex = None
             self.edit_tab.set_selected_vertex(None)
         self._last_tab_index = idx
+        self.update_plot()  # Ensure plot is updated on every tab switch
 
     def on_plot_click(self, event):
+        # Use the plot_widget from the currently active tab
+        current_tab = self.tabs.currentWidget()
+        plot_widget = getattr(current_tab, 'plot_widget', None)
+        if plot_widget is None:
+            return
         pos = event.scenePos()
-        vb = self.plot_widget.getViewBox()
+        vb = plot_widget.getViewBox()
         mouse_point = vb.mapSceneToView(pos)
         x, y = mouse_point.x(), mouse_point.y()
         in_new_tab = self.tabs.tabText(self.tabs.currentIndex()) == 'New'
@@ -296,13 +265,20 @@ class ShapeGUI(QWidget):
                     self.update_plot()
 
     def update_plot(self):
-        self.plot_widget.clear()
+        # Use the plot_widget from the currently active tab
+        current_tab = self.tabs.currentWidget()
+        plot_widget = getattr(current_tab, 'plot_widget', None)
+        if plot_widget is None:
+            return
+        plot_widget.clear()
         show_grid = False
         show_com = True
         if hasattr(self, 'visualize_tab'):
-            show_grid = self.visualize_tab.grid_checkbox.isChecked()
-            show_com = self.visualize_tab.com_checkbox.isChecked()
-        self.plot_widget.showGrid(x=show_grid, y=show_grid, alpha=0.3 if show_grid else 0)
+            show_grid = getattr(self.visualize_tab, 'grid_checkbox', None)
+            show_com = getattr(self.visualize_tab, 'com_checkbox', None)
+            show_grid = show_grid.isChecked() if show_grid else False
+            show_com = show_com.isChecked() if show_com else True
+        plot_widget.showGrid(x=show_grid, y=show_grid, alpha=0.3 if show_grid else 0)
         if self.tabs.tabText(self.tabs.currentIndex()) == 'New':
             shape = self.drawing_shape
         else:
@@ -312,7 +288,8 @@ class ShapeGUI(QWidget):
             return
         fill_shape = False
         if hasattr(self, 'visualize_tab'):
-            fill_shape = self.visualize_tab.fill_checkbox.isChecked()
+            fill_shape = getattr(self.visualize_tab, 'fill_checkbox', None)
+            fill_shape = fill_shape.isChecked() if fill_shape else False
         if fill_shape and len(shape.vertices) >= 3:
             closed = all((i, (i+1)%len(shape.vertices)) in shape.edges or ((i+1)%len(shape.vertices), i) in shape.edges for i in range(len(shape.vertices)))
             if closed:
@@ -322,32 +299,36 @@ class ShapeGUI(QWidget):
                     pts = np.vstack([pts, pts[0]])
                 x = pts[:, 0]
                 y = pts[:, 1]
-                self.plot_widget.plot(x, y, pen=pg.mkPen('blue', width=2), fillLevel=0, fillBrush=pg.mkBrush('lightblue', alpha=80))
+                plot_widget.plot(x, y, pen=pg.mkPen('blue', width=2), fillLevel=0, fillBrush=pg.mkBrush('lightblue', alpha=80))
         for edge in shape.edges:
             v0 = shape.vertices[edge[0]]
             v1 = shape.vertices[edge[1]]
-            self.plot_widget.plot([v0[0], v1[0]], [v0[1], v1[1]], pen=pg.mkPen('b', width=2))
+            plot_widget.plot([v0[0], v1[0]], [v0[1], v1[1]], pen=pg.mkPen('b', width=2))
         xs, ys = zip(*shape.vertices)
-        self.plot_widget.plot(xs, ys, pen=None, symbol='o', symbolBrush='r', symbolSize=12)
+        plot_widget.plot(xs, ys, pen=None, symbol='o', symbolBrush='r', symbolSize=12)
         show_labels = False
         if hasattr(self, 'visualize_tab'):
-            show_labels = self.visualize_tab.label_checkbox.isChecked()
+            show_labels = getattr(self.visualize_tab, 'label_checkbox', None)
+            show_labels = show_labels.isChecked() if show_labels else False
         if show_labels:
             for i, (x, y) in enumerate(shape.vertices):
                 label = f"v{i+1}"
                 text = pg.TextItem(label, anchor=(0.5, 1.5), color='k')
+                # Ensure x, y are floats (not torch tensors)
+                x = float(x.item()) if hasattr(x, 'item') else float(x)
+                y = float(y.item()) if hasattr(y, 'item') else float(y)
                 text.setPos(x, y)
-                self.plot_widget.addItem(text)
+                plot_widget.addItem(text)
         if show_com:
             area, center_of_mass = calculate_center_of_mass(shape)
             if center_of_mass is not None:
                 cx, cy = center_of_mass.tolist()
                 cx = float(cx)
                 cy = float(cy)
-                self.plot_widget.plot([cx], [cy], pen=None, symbol='+', symbolBrush='red', symbolPen='red', symbolSize=20)
+                plot_widget.plot([cx], [cy], pen=None, symbol='+', symbolBrush='red', symbolPen='red', symbolSize=20)
                 text = pg.TextItem(text=f'CoM: ({cx:.2f}, {cy:.2f})', color='red', anchor=(0.5, 1.5))
                 text.setPos(cx, cy)
-                self.plot_widget.addItem(text)
+                plot_widget.addItem(text)
                 # --- Stability check ---
                 try:
                     from shape_stability import is_shape_stable
@@ -357,14 +338,19 @@ class ShapeGUI(QWidget):
                     else:
                         stability_text = pg.TextItem(text='Will fall!', color='red', anchor=(0.5, -0.5))
                     stability_text.setPos(cx, cy)
-                    self.plot_widget.addItem(stability_text)
+                    plot_widget.addItem(stability_text)
                 except Exception as e:
                     pass
         if self.add_edge_mode and self.selected_vertices:
             sel_xs = [shape.vertices[i][0] for i in self.selected_vertices]
             sel_ys = [shape.vertices[i][1] for i in self.selected_vertices]
-            self.plot_widget.plot(sel_xs, sel_ys, pen=None, symbol='o', symbolBrush='g', symbolSize=16)
+            plot_widget.plot(sel_xs, sel_ys, pen=None, symbol='o', symbolBrush='g', symbolSize=16)
         if self.tabs.tabText(self.tabs.currentIndex()) == 'Edit' and self.selected_vertex is not None:
             vx, vy = shape.vertices[self.selected_vertex]
-            self.plot_widget.plot([vx], [vy], pen=None, symbol='o', symbolBrush='g', symbolSize=18)
+            # Ensure vx, vy are floats
+            if hasattr(vx, 'item'):
+                vx = float(vx.item())
+            if hasattr(vy, 'item'):
+                vy = float(vy.item())
+            plot_widget.plot([vx], [vy], pen=None, symbol='o', symbolBrush='g', symbolSize=18)
         self.new_tab.update_info()
