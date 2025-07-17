@@ -8,6 +8,7 @@ class OptimizationTab(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
+        self.last_optimized_vertices = None  # Store last optimized result
         self.init_ui()
         self.plot_current_shape()  # Show the current shape on tab open
 
@@ -33,14 +34,20 @@ class OptimizationTab(QWidget):
         layout.addLayout(plot_layout)
         self.setLayout(layout)
 
-    def plot_current_shape(self):
+    def plot_current_shape(self, use_last_optimized=False):
         shape = self.main_window.shape
         self.before_plot.clear()
-        if shape is None or len(shape.vertices) < 2:
+        if shape is None:
             self.before_plot.setTitle("Before Optimization")
             return
-        V = shape.vertices
+        if use_last_optimized and self.last_optimized_vertices is not None:
+            V = self.last_optimized_vertices
+        else:
+            V = shape.vertices
         E = shape.edges
+        if V is None or len(V) < 2:
+            self.before_plot.setTitle("Before Optimization")
+            return
         # Plot edges
         for i, j in E:
             self.before_plot.plot(
@@ -70,10 +77,14 @@ class OptimizationTab(QWidget):
 
     def run_optimization(self):
         shape = self.main_window.shape
-        if shape is None or len(shape.vertices) < 3 or len(shape.edges) < 3:
+        # Use last optimized vertices if available, else use original
+        if self.last_optimized_vertices is not None:
+            V_og = self.last_optimized_vertices
+        else:
+            V_og = shape.vertices
+        if V_og is None or len(V_og) < 3 or len(shape.edges) < 3:
             self.info_label.setText("No valid shape loaded.")
             return
-        V_og = shape.vertices
         E = torch.tensor(shape.edges, dtype=torch.long, device=V_og.device)
         V0 = V_og.clone()  # No perturbation
         def loss_fn(V):
@@ -87,8 +98,10 @@ class OptimizationTab(QWidget):
         if torch.isnan(V_opt).any():
             self.info_label.setText("Optimization failed: NaN encountered in result.")
             return
-        # Plot before (edges)
-        self.plot_current_shape()
+        # Store the optimized vertices for possible re-optimization
+        self.last_optimized_vertices = V_opt.detach()
+        # Plot before (edges) -- show the previous input
+        self.plot_current_shape(use_last_optimized=False)
         # Plot after (edges)
         self.after_plot.clear()
         for i, j in shape.edges:
@@ -115,4 +128,4 @@ class OptimizationTab(QWidget):
             self.after_plot.addItem(stability_text_a)
         except Exception as e:
             pass
-        self.info_label.setText("Optimization complete!") 
+        self.info_label.setText("Optimization complete! Run again to further optimize the result.") 
