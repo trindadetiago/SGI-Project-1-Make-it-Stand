@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QSpinBox
 import pyqtgraph as pg
 import torch
 from shape2d import Shape2D
@@ -16,6 +16,20 @@ class OptimizationTab(QWidget):
         layout = QVBoxLayout()
         self.info_label = QLabel("Run optimization to improve stability, smoothness, and similarity.")
         layout.addWidget(self.info_label)
+        # Add spinbox for iterations
+        iter_layout = QHBoxLayout()
+        iter_label = QLabel("Iterations:")
+        self.iter_spinbox = QSpinBox()
+        self.iter_spinbox.setMinimum(1)
+        self.iter_spinbox.setMaximum(100000)
+        self.iter_spinbox.setValue(1000)
+        iter_layout.addWidget(iter_label)
+        iter_layout.addWidget(self.iter_spinbox)
+        layout.addLayout(iter_layout)
+        # Add Reset button
+        self.reset_btn = QPushButton("Reset to Original Shape")
+        self.reset_btn.clicked.connect(self.reset_to_original)
+        layout.addWidget(self.reset_btn)
         self.run_btn = QPushButton("Run Optimizer on Current Shape")
         self.run_btn.clicked.connect(self.run_optimization)
         layout.addWidget(self.run_btn)
@@ -89,7 +103,8 @@ class OptimizationTab(QWidget):
         V0 = V_og.clone()  # No perturbation
         def loss_fn(V):
             return total_loss(V, E, V_og, lambda1=0.33, lambda2=0.33, lambda3=0.34)
-        V_opt = gradient_descent(loss_fn, V0, lr=0.05, max_iters=1000, verbose=True)
+        max_iters = self.iter_spinbox.value()
+        V_opt = gradient_descent(loss_fn, V0, lr=0.05, max_iters=max_iters, verbose=True)
         # Logging for debugging
         print("V_opt after optimization:", V_opt)
         print("Any NaN in V_opt?", torch.isnan(V_opt).any().item())
@@ -128,4 +143,10 @@ class OptimizationTab(QWidget):
             self.after_plot.addItem(stability_text_a)
         except Exception as e:
             pass
-        self.info_label.setText("Optimization complete! Run again to further optimize the result.") 
+        self.info_label.setText("Optimization complete! Run again to further optimize the result.")
+
+    def reset_to_original(self):
+        self.last_optimized_vertices = None
+        self.plot_current_shape(use_last_optimized=False)
+        self.after_plot.clear()
+        self.info_label.setText("Reset to original shape. Ready to optimize again.") 
