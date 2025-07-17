@@ -48,6 +48,27 @@ class CompareTab(QWidget):
         layout.addWidget(self.plot_widget, stretch=1)
         self.setLayout(layout)
         self.refresh_shape_dropdowns()
+        self.update_plot()
+
+    def update_plot(self):
+        self.plot_widget.clear()
+        # Draw shape1 in blue
+        if self.shape1 is not None and len(self.shape1.vertices) > 0:
+            for edge in self.shape1.edges:
+                v0 = self.shape1.vertices[edge[0]]
+                v1 = self.shape1.vertices[edge[1]]
+                self.plot_widget.plot([v0[0], v1[0]], [v0[1], v1[1]], pen=pg.mkPen('b', width=2))
+            xs, ys = zip(*self.shape1.vertices)
+            self.plot_widget.plot(xs, ys, pen=None, symbol='o', symbolBrush='b', symbolSize=10)
+        # Draw shape2 in red
+        if self.shape2 is not None and len(self.shape2.vertices) > 0:
+            for edge in self.shape2.edges:
+                v0 = self.shape2.vertices[edge[0]]
+                v1 = self.shape2.vertices[edge[1]]
+                self.plot_widget.plot([v0[0], v1[0]], [v0[1], v1[1]], pen=pg.mkPen('r', width=2, style=pg.QtCore.Qt.DashLine))
+            xs, ys = zip(*self.shape2.vertices)
+            self.plot_widget.plot(xs, ys, pen=None, symbol='o', symbolBrush='r', symbolSize=10)
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
 
     def refresh_shape_dropdowns(self):
         SHAPES_DIR = self.main_window.SHAPES_DIR
@@ -69,26 +90,31 @@ class CompareTab(QWidget):
         self.shape1 = None
         self.shape2 = None
         self.result_label.setText('Similarity: -')
+        self.update_plot()
 
     def on_shape1_change(self, idx):
         if idx == 0:
             self.shape1 = None
+            self.update_plot()
             return
         fname = self.shape1_dropdown.currentText()
         path = os.path.join(self.main_window.SHAPES_DIR, fname)
         if os.path.isfile(path):
             self.shape1 = Shape2D.load_from_json(path)
             self.result_label.setText('Similarity: -')
+            self.update_plot()
 
     def on_shape2_change(self, idx):
         if idx == 0:
             self.shape2 = None
+            self.update_plot()
             return
         fname = self.shape2_dropdown.currentText()
         path = os.path.join(self.main_window.SHAPES_DIR, fname)
         if os.path.isfile(path):
             self.shape2 = Shape2D.load_from_json(path)
             self.result_label.setText('Similarity: -')
+            self.update_plot()
 
     def compare_shapes(self):
         if self.shape1 is None or self.shape2 is None:
@@ -98,4 +124,5 @@ class CompareTab(QWidget):
             similarity = calculate_shape_similarity(self.shape1, self.shape2)
             self.result_label.setText(f'Similarity: {similarity:.6f} (lower is more similar)')
         except Exception as e:
-            self.result_label.setText(f'Error: {str(e)}') 
+            self.result_label.setText(f'Error: {str(e)}')
+        self.update_plot() 

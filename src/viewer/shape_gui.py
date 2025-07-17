@@ -61,6 +61,7 @@ class ShapeGUI(QWidget):
         self.selected_vertex = None  # For edit mode
         self._last_tab_index = 0
         self.current_shape_path = None  # Track the current file path
+        self._previous_shape = None  # Store previous shape for New tab
         self.init_ui()
 
     def init_ui(self):
@@ -168,6 +169,7 @@ class ShapeGUI(QWidget):
     def on_tab_changed(self, idx):
         tab_name = self.tabs.tabText(idx)
         if tab_name == 'New':
+            self._previous_shape = self.shape  # Save the current shape before hiding
             self.drawing_shape = Shape2D()
             self.selected_vertices = []
             self.new_tab.clear_canvas_and_reset_view()
@@ -176,9 +178,14 @@ class ShapeGUI(QWidget):
         elif tab_name == 'Optimization':
             self.optimization_tab.plot_current_shape()
         else:
-            if self.drawing_shape and len(self.drawing_shape.vertices) > 0:
-                self.shape = self.drawing_shape
-            self.drawing_shape = None
+            # Leaving New tab
+            if self._last_tab_index is not None and self.tabs.tabText(self._last_tab_index) == 'New':
+                # If a new shape was drawn, use it; otherwise, restore previous shape
+                if self.drawing_shape and len(self.drawing_shape.vertices) > 0:
+                    self.shape = self.drawing_shape
+                else:
+                    self.shape = self._previous_shape
+                self.drawing_shape = None
         if tab_name == 'Edit':
             self.selected_vertex = None
             self.edit_tab.set_selected_vertex(None)
