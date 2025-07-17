@@ -3,15 +3,16 @@ from shape2d import Shape2D
 from shape_smoothing import calculate_smoothing_score
 from shape_similarity import calculate_shape_similarity
 from shape_mass_center import calculate_center_of_mass
+from constants import SUPPORT_TOL
 
 def f1(V: torch.Tensor, E: torch.Tensor, support_y=None) -> torch.Tensor:
     # Use the lowest y as the support if not specified
     if support_y is None:
         min_y = V[:, 1].min()
-        tol = 1e-3
+        tol = SUPPORT_TOL
         support_mask = torch.abs(V[:, 1] - min_y) < tol
     else:
-        tol = 1e-6
+        tol = SUPPORT_TOL
         support_mask = torch.isclose(V[:, 1], torch.tensor(support_y, dtype=V.dtype, device=V.device), atol=tol)
     if support_mask.sum() == 0:
         # If still no support, just use the lowest y vertex
@@ -31,7 +32,7 @@ def total_loss(V: torch.Tensor, E: torch.Tensor, V_og: torch.Tensor, lambda1=0.3
     return lambda1 * mu1 * f1(V, E) + lambda2 * mu2 * f2(V) + lambda3 * mu3 * f3(V, V_og)
 
 # --- Simple gradient descent optimizer for V only ---
-def gradient_descent(f, V0, lr=0.01, tol=1e-6, max_iters=1000, verbose=False):
+def gradient_descent(f, V0, lr=0.01, tol=SUPPORT_TOL, max_iters=1000, verbose=False):
     """
     Simple gradient descent optimizer for V only.
     Args:
@@ -45,6 +46,10 @@ def gradient_descent(f, V0, lr=0.01, tol=1e-6, max_iters=1000, verbose=False):
         Optimized vertices (torch.Tensor)
     """
     V = V0.clone().detach().requires_grad_(True)
+    
+    # Identify support vertices (those at y=0 or very close to it)
+    support_mask = torch.abs(V0[:, 1]) < SUPPORT_TOL
+    
     stopped = None
     for i in range(max_iters):
         if V.grad is not None:
@@ -59,6 +64,8 @@ def gradient_descent(f, V0, lr=0.01, tol=1e-6, max_iters=1000, verbose=False):
             break
         loss.backward()
         with torch.no_grad():
+            # Zero out gradients for support vertices to keep them fixed
+            V.grad[support_mask] = 0.0
             V -= lr * V.grad
     else:
         stopped = 'max_iters'

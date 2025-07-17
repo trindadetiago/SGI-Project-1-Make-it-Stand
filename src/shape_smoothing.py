@@ -1,5 +1,6 @@
 import torch
 from typing import List, Tuple, Union
+from constants import SUPPORT_TOL
 
 # Accepts either Shape2D or torch.Tensor for vertices
 
@@ -19,7 +20,8 @@ def calculate_smoothing_score(vertices) -> torch.Tensor:
         v0 = V[(i - 1) % n]
         v1 = V[i]
         v2 = V[(i + 1) % n]
-        if v1[1] == 0:
+        # Skip if v0 and v1 are both on support, or v1 and v2 are both on support
+        if (abs(v1[1]) < SUPPORT_TOL and abs(v0[1]) < SUPPORT_TOL) or (abs(v2[1]) < SUPPORT_TOL and abs(v1[1]) < SUPPORT_TOL):
             continue
         midpoint = 0.5 * (v0 + v2)
         distance = torch.norm(v1 - midpoint, p=2)
@@ -35,7 +37,7 @@ def smooth_shape(vertices, iterations: int = 1, strength: float = 0.5, edges=Non
             v0 = V[(i - 1) % n]
             v1 = V[i]
             v2 = V[(i + 1) % n]
-            if v1[1] == 0:
+            if abs(v1[1]) < SUPPORT_TOL:
                 new_V[i] = v1
                 continue
             midpoint = 0.5 * (v0 + v2)
