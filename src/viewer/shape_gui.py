@@ -180,11 +180,8 @@ class ShapeGUI(QWidget):
         else:
             # Leaving New tab
             if self._last_tab_index is not None and self.tabs.tabText(self._last_tab_index) == 'New':
-                # If a new shape was drawn, use it; otherwise, restore previous shape
-                if self.drawing_shape and len(self.drawing_shape.vertices) > 0:
-                    self.shape = self.drawing_shape
-                else:
-                    self.shape = self._previous_shape
+                # Always restore the previous shape when leaving New tab
+                self.shape = self._previous_shape
                 self.drawing_shape = None
         if tab_name == 'Edit':
             self.selected_vertex = None
