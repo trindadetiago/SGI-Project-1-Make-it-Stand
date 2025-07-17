@@ -348,6 +348,18 @@ class ShapeGUI(QWidget):
                 text = pg.TextItem(text=f'CoM: ({cx:.2f}, {cy:.2f})', color='red', anchor=(0.5, 1.5))
                 text.setPos(cx, cy)
                 self.plot_widget.addItem(text)
+                # --- Stability check ---
+                try:
+                    from shape_stability import is_shape_stable
+                    is_stable, x_cm, x_left, x_right = is_shape_stable(torch.tensor(shape.vertices, dtype=torch.float32), shape.edges)
+                    if is_stable:
+                        stability_text = pg.TextItem(text='Stable', color='green', anchor=(0.5, -0.5))
+                    else:
+                        stability_text = pg.TextItem(text='Will fall!', color='red', anchor=(0.5, -0.5))
+                    stability_text.setPos(cx, cy)
+                    self.plot_widget.addItem(stability_text)
+                except Exception as e:
+                    pass
         if self.add_edge_mode and self.selected_vertices:
             sel_xs = [shape.vertices[i][0] for i in self.selected_vertices]
             sel_ys = [shape.vertices[i][1] for i in self.selected_vertices]
