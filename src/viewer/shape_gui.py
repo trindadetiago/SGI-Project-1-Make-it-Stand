@@ -329,9 +329,11 @@ class ShapeGUI(QWidget):
                 text.setPos(x, y)
                 self.plot_widget.addItem(text)
         if show_com:
-            com = calculate_center_of_mass(shape)
-            if com:
-                cx, cy = com
+            area, center_of_mass = calculate_center_of_mass(shape)
+            if center_of_mass is not None:
+                cx, cy = center_of_mass.tolist()
+                cx = float(cx)
+                cy = float(cy)
                 self.plot_widget.plot([cx], [cy], pen=None, symbol='+', symbolBrush='red', symbolPen='red', symbolSize=20)
                 text = pg.TextItem(text=f'CoM: ({cx:.2f}, {cy:.2f})', color='red', anchor=(0.5, 1.5))
                 text.setPos(cx, cy)

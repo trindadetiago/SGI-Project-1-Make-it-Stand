@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QInputDialog, QMessageBox
 from shape_processing import scale_shape
 from shape_smoothing import smooth_shape, calculate_smoothing_score
+from shape2d import Shape2D
 
 class ProcessTab(QWidget):
     def __init__(self, main_window):
@@ -37,15 +38,13 @@ class ProcessTab(QWidget):
             strength, ok2 = QInputDialog.getDouble(self, 'Smooth Shape', 'Smoothing strength (0.0-1.0):', 0.5, 0.0, 1.0, 2)
             if ok2:
                 # Calculate initial score
-                initial_score = calculate_smoothing_score(self.main_window.shape)
-                
+                initial_score = calculate_smoothing_score(self.main_window.shape).item()
                 # Apply smoothing
-                self.main_window.shape = smooth_shape(self.main_window.shape, iterations, strength)
+                new_vertices = smooth_shape(self.main_window.shape, iterations, strength)
+                self.main_window.shape = Shape2D(new_vertices, self.main_window.shape.edges.copy())
                 self.main_window.update_plot()
-                
                 # Calculate final score
-                final_score = calculate_smoothing_score(self.main_window.shape)
-                
+                final_score = calculate_smoothing_score(self.main_window.shape).item()
                 # Show improvement
                 QMessageBox.information(self, 'Smoothing Complete', 
                     f'Initial smoothing score: {initial_score:.6f}\n'
@@ -55,7 +54,7 @@ class ProcessTab(QWidget):
     def show_smoothing_score(self):
         if self.main_window.shape is None:
             return
-        score = calculate_smoothing_score(self.main_window.shape)
+        score = calculate_smoothing_score(self.main_window.shape).item()
         QMessageBox.information(self, 'Smoothing Score', 
             f'Current smoothing score: {score:.6f}\n'
             f'(Lower values indicate smoother shapes)')
