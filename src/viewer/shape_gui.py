@@ -51,7 +51,7 @@ class ShapeGUI(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('2D Shape Framework')
+        self.setWindowTitle('Make It Stand: 2D - SGI')
         self.resize(1200, 800)  # Larger default window size
         self.shape = None
         self.drawing_shape = None  # Used in draw mode
@@ -61,6 +61,7 @@ class ShapeGUI(QWidget):
         self.selected_vertex = None  # For edit mode
         self._last_tab_index = 0
         self.current_shape_path = None  # Track the current file path
+        self._previous_shape = None  # Store previous shape for New tab
         self.init_ui()
 
     def init_ui(self):
@@ -168,6 +169,7 @@ class ShapeGUI(QWidget):
     def on_tab_changed(self, idx):
         tab_name = self.tabs.tabText(idx)
         if tab_name == 'New':
+            self._previous_shape = self.shape  # Save the current shape before hiding
             self.drawing_shape = Shape2D()
             self.selected_vertices = []
             self.new_tab.clear_canvas_and_reset_view()
@@ -176,9 +178,11 @@ class ShapeGUI(QWidget):
         elif tab_name == 'Optimization':
             self.optimization_tab.plot_current_shape()
         else:
-            if self.drawing_shape and len(self.drawing_shape.vertices) > 0:
-                self.shape = self.drawing_shape
-            self.drawing_shape = None
+            # Leaving New tab
+            if self._last_tab_index is not None and self.tabs.tabText(self._last_tab_index) == 'New':
+                # Always restore the previous shape when leaving New tab
+                self.shape = self._previous_shape
+                self.drawing_shape = None
         if tab_name == 'Edit':
             self.selected_vertex = None
             self.edit_tab.set_selected_vertex(None)
@@ -201,9 +205,14 @@ class ShapeGUI(QWidget):
         if self.draw_mode and in_new_tab:
             if self.drawing_shape is None:
                 self.drawing_shape = Shape2D()
+            # Snap to y=0 if close
+            snap_threshold = 0.05
+            if abs(y) < snap_threshold:
+                y = 0.0
             new_vertex = torch.tensor([[x, y]], dtype=self.drawing_shape.vertices.dtype)
             self.drawing_shape.vertices = torch.cat([self.drawing_shape.vertices, new_vertex], dim=0)
             self.update_plot()
+            return
         elif self.add_edge_mode and in_new_tab and shape is not None:
             if len(shape.vertices) == 0:
                 return
@@ -224,7 +233,7 @@ class ShapeGUI(QWidget):
                     self.selected_vertices = []
                 self.update_plot()
         elif in_edit_tab and shape is not None:
-            # Select a vertex for dragging
+            # Select a vertex or edge for dragging or editing
             min_dist = float('inf')
             min_idx = -1
             for i, (vx, vy) in enumerate(shape.vertices):
@@ -232,13 +241,33 @@ class ShapeGUI(QWidget):
                 if dist < min_dist:
                     min_dist = dist
                     min_idx = i
-            if min_dist < 0.25:
+            # Edge selection logic
+            edge_threshold = 0.15
+            closest_edge = None
+            closest_edge_dist = float('inf')
+            for edge in shape.edges:
+                i, j = edge
+                v0 = shape.vertices[i]
+                v1 = shape.vertices[j]
+                mx = (v0[0] + v1[0]) / 2
+                my = (v0[1] + v1[1]) / 2
+                dist = (mx - x) ** 2 + (my - y) ** 2
+                if dist < closest_edge_dist:
+                    closest_edge_dist = dist
+                    closest_edge = edge
+            # Prefer edge if closer to edge than to any vertex
+            if closest_edge is not None and closest_edge_dist < edge_threshold and closest_edge_dist < min_dist:
+                self.selected_vertex = None
+                self.edit_tab.set_selected_edge(closest_edge)
+            elif min_dist < 0.25:
                 self.selected_vertex = min_idx
                 self.edit_tab.set_selected_vertex(min_idx)
+                self.edit_tab.clear_selected_edge()
                 self._dragging_vertex = True
             else:
                 self.selected_vertex = None
                 self.edit_tab.set_selected_vertex(None)
+                self.edit_tab.clear_selected_edge()
             self.update_plot()
             self._dragging_vertex = False  # End dragging on click
         elif not in_new_tab:
@@ -273,6 +302,11 @@ class ShapeGUI(QWidget):
         if plot_widget is None:
             return
         plot_widget.clear()
+        # For New tab, always show grid and y=0 line
+        if self.tabs.tabText(self.tabs.currentIndex()) == 'New':
+            plot_widget.showGrid(x=True, y=True, alpha=0.3)
+            y0_line = pg.InfiniteLine(pos=0, angle=0, pen=pg.mkPen('orange', width=2))
+            plot_widget.addItem(y0_line)
         show_grid = False
         show_com = True
         if hasattr(self, 'visualize_tab'):
@@ -302,6 +336,12 @@ class ShapeGUI(QWidget):
                 x = pts[:, 0]
                 y = pts[:, 1]
                 plot_widget.plot(x, y, pen=pg.mkPen('blue', width=2), fillLevel=0, fillBrush=pg.mkBrush('lightblue', alpha=80))
+        # Highlight selected edge if in Edit tab
+        if self.tabs.tabText(self.tabs.currentIndex()) == 'Edit' and hasattr(self.edit_tab, 'selected_edge') and self.edit_tab.selected_edge is not None:
+            i, j = self.edit_tab.selected_edge
+            v0 = shape.vertices[i]
+            v1 = shape.vertices[j]
+            plot_widget.plot([v0[0], v1[0]], [v0[1], v1[1]], pen=pg.mkPen('g', width=4))
         for edge in shape.edges:
             v0 = shape.vertices[edge[0]]
             v1 = shape.vertices[edge[1]]
@@ -334,7 +374,12 @@ class ShapeGUI(QWidget):
                 # --- Stability check ---
                 try:
                     from shape_stability import is_shape_stable
-                    is_stable, x_cm, x_left, x_right = is_shape_stable(torch.tensor(shape.vertices, dtype=torch.float32), shape.edges)
+                    vertices_tensor = shape.vertices
+                    if not isinstance(vertices_tensor, torch.Tensor):
+                        vertices_tensor = torch.tensor(vertices_tensor, dtype=torch.float32)
+                    else:
+                        vertices_tensor = vertices_tensor.clone().detach().to(dtype=torch.float32)
+                    is_stable, x_cm, x_left, x_right = is_shape_stable(vertices_tensor, shape.edges)
                     if is_stable:
                         stability_text = pg.TextItem(text='Stable', color='green', anchor=(0.5, -0.5))
                     else:

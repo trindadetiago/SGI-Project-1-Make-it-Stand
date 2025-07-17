@@ -28,6 +28,10 @@ class NewTab(QWidget):
         self.plot_widget.setMinimumHeight(600)
         self.plot_widget.setMinimumWidth(900)
         self.plot_widget.scene().sigMouseClicked.connect(self.main_window.on_plot_click)
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)  # Grid ON by default
+        # Add orange y=0 line
+        y0_line = pg.InfiniteLine(pos=0, angle=0, pen=pg.mkPen('orange', width=2))
+        self.plot_widget.addItem(y0_line)
         # Main layout
         main_layout = QVBoxLayout()
         main_layout.addLayout(controls_layout)
@@ -58,7 +62,7 @@ class NewTab(QWidget):
         self.main_window.drawing_shape = None
         self.main_window.shape = None
         self.main_window.selected_vertices = []
-        self.main_window.plot_widget.clear()
-        vb = self.main_window.plot_widget.getViewBox()
+        self.plot_widget.clear()
+        vb = self.plot_widget.getViewBox()
         vb.setRange(xRange=[-1, 1], yRange=[-1, 1], padding=0.1)
         self.update_info() 
