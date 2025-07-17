@@ -14,6 +14,7 @@ from PyQt5.QtGui import QPolygonF, QBrush, QColor
 from PyQt5.QtCore import QPointF
 from shape_processing import scale_shape
 from shape_mass_center import calculate_center_of_mass
+import torch
 
 class DataPolygonItem(pg.GraphicsObject):
     def __init__(self, vertices, viewbox, *args, **kwargs):
@@ -63,7 +64,7 @@ class CustomViewBox(pg.ViewBox):
                 shape = self.main_window.shape
                 idx = self.main_window.selected_vertex
                 if shape and 0 <= idx < len(shape.vertices):
-                    shape.vertices[idx] = (x, y)
+                    shape.vertices[idx] = torch.tensor([x, y], dtype=shape.vertices.dtype)
                     self.main_window.update_plot()
                 ev.accept()
                 return
@@ -219,7 +220,8 @@ class ShapeGUI(QWidget):
         if self.draw_mode and in_new_tab:
             if self.drawing_shape is None:
                 self.drawing_shape = Shape2D()
-            self.drawing_shape.vertices.append((x, y))
+            new_vertex = torch.tensor([[x, y]], dtype=self.drawing_shape.vertices.dtype)
+            self.drawing_shape.vertices = torch.cat([self.drawing_shape.vertices, new_vertex], dim=0)
             self.update_plot()
         elif self.add_edge_mode and in_new_tab and shape is not None:
             if len(shape.vertices) == 0:
@@ -260,7 +262,8 @@ class ShapeGUI(QWidget):
             self._dragging_vertex = False  # End dragging on click
         elif not in_new_tab:
             if self.draw_mode:
-                self.drawing_shape.vertices.append((x, y))
+                new_vertex = torch.tensor([[x, y]], dtype=self.drawing_shape.vertices.dtype)
+                self.drawing_shape.vertices = torch.cat([self.drawing_shape.vertices, new_vertex], dim=0)
                 self.update_plot()
             elif self.add_edge_mode and self.shape is not None:
                 if len(self.shape.vertices) == 0:

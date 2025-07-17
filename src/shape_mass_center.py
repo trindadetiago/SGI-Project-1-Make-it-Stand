@@ -1,9 +1,10 @@
 from shape2d import Shape2D
+import torch
 
 def calculate_center_of_mass(shape: Shape2D):
-    """Mock: Returns a fixed center of mass (e.g., average of vertices, or just (0.5, 0.5))."""
-    if not shape or not shape.vertices:
+    """Returns the average of all vertices as the center of mass."""
+    if shape is None or shape.vertices is None or shape.vertices.shape[0] == 0:
         return None
-    # Mock: just return the average of all vertices
-    xs, ys = zip(*shape.vertices)
-    return (sum(xs) / len(xs), sum(ys) / len(ys)) 
+    xs = shape.vertices[:, 0]
+    ys = shape.vertices[:, 1]
+    return (float(xs.mean()), float(ys.mean())) 
