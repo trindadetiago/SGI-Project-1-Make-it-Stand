@@ -9,6 +9,7 @@ from .tab_visualize import VisualizeTab
 from .tab_process import ProcessTab
 from .tab_new import NewTab
 from .tab_edit import EditTab
+from .tab_compare import CompareTab
 from PyQt5.QtGui import QPolygonF, QBrush, QColor
 from PyQt5.QtCore import QPointF
 from shape_processing import scale_shape
@@ -92,10 +93,12 @@ class ShapeGUI(QWidget):
         self.process_tab = ProcessTab(self)
         self.new_tab = NewTab(self)
         self.edit_tab = EditTab(self)
+        self.compare_tab = CompareTab(self)
         self.tabs.addTab(self.visualize_tab, 'Visualize')
         self.tabs.addTab(self.process_tab, 'Process')
         self.tabs.addTab(self.new_tab, 'New')
         self.tabs.addTab(self.edit_tab, 'Edit')
+        self.tabs.addTab(self.compare_tab, 'Compare')
         self.tabs.currentChanged.connect(self.on_tab_changed)
         main_layout.addWidget(self.tabs)
         # --- Plot ---
@@ -110,6 +113,7 @@ class ShapeGUI(QWidget):
 
     def showEvent(self, event):
         self.visualize_tab.refresh_shape_dropdown()
+        self.compare_tab.refresh_shape_dropdowns()
         # Automatically select and load the first shape if available
         if self.visualize_tab.shape_dropdown.count() > 1:
             self.visualize_tab.shape_dropdown.setCurrentIndex(1)
@@ -192,6 +196,8 @@ class ShapeGUI(QWidget):
             self.shape = None
             self.selected_vertices = []
             self.new_tab.clear_canvas_and_reset_view()
+        elif self.tabs.tabText(idx) == 'Compare':
+            self.compare_tab.refresh_shape_dropdowns()
         else:
             # When leaving New tab, optionally set self.shape = self.drawing_shape if you want to keep the new shape
             if self.drawing_shape and len(self.drawing_shape.vertices) > 0:

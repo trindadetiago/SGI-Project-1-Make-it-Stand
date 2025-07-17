@@ -10,9 +10,12 @@ class EditTab(QWidget):
         self.deselect_btn.clicked.connect(self.deselect_vertex)
         self.save_overwrite_btn = QPushButton('Save (Overwrite)')
         self.save_overwrite_btn.clicked.connect(self.save_overwrite)
+        self.save_new_btn = QPushButton('Save As New')
+        self.save_new_btn.clicked.connect(self.save_as_new)
         layout.addWidget(self.info_label)
         layout.addWidget(self.deselect_btn)
         layout.addWidget(self.save_overwrite_btn)
+        layout.addWidget(self.save_new_btn)
         self.setLayout(layout)
         self.selected_vertex = None
         self.update_save_button()
@@ -33,5 +36,10 @@ class EditTab(QWidget):
         self.main_window.save_current_shape()
         self.update_save_button()
 
+    def save_as_new(self):
+        self.main_window.save_shape_dialog()
+        self.update_save_button()
+
     def update_save_button(self):
-        self.save_overwrite_btn.setEnabled(self.main_window.current_shape_path is not None) 
+        self.save_overwrite_btn.setEnabled(self.main_window.current_shape_path is not None)
+        self.save_new_btn.setEnabled(True) 
