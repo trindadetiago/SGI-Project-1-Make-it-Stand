@@ -42,7 +42,7 @@ class OptimizationTab(QWidget):
         V0 = V_og.clone()  # No perturbation
         def loss_fn(V):
             return total_loss(V, E, V_og, lambda1=0.33, lambda2=0.33, lambda3=0.34)
-        V_opt = gradient_descent(loss_fn, V0, lr=0.05, max_iters=1000, verbose=False)
+        V_opt = gradient_descent(loss_fn, V0, lr=0.05, max_iters=1000, verbose=True)
         # Logging for debugging
         print("V_opt after optimization:", V_opt)
         print("Any NaN in V_opt?", torch.isnan(V_opt).any().item())
@@ -61,6 +61,22 @@ class OptimizationTab(QWidget):
             )
         self.before_plot.plot(V0[:,0].cpu().numpy(), V0[:,1].cpu().numpy(), pen=None, symbol='o', symbolBrush='r', symbolSize=10)
         self.before_plot.setTitle("Before Optimization")
+        # --- Center of Mass and Stability (Before) ---
+        try:
+            from shape_mass_center import calculate_center_of_mass
+            from shape_stability import is_shape_stable
+            area_b, com_b = calculate_center_of_mass(V0, E)
+            cx_b, cy_b = float(com_b[0].item()), float(com_b[1].item())
+            self.before_plot.plot([cx_b], [cy_b], pen=None, symbol='+', symbolBrush='red', symbolPen='red', symbolSize=20)
+            is_stable_b, _, _, _ = is_shape_stable(V0, E)
+            if is_stable_b:
+                stability_text_b = pg.TextItem(text='Stable', color='green', anchor=(0.5, -0.5))
+            else:
+                stability_text_b = pg.TextItem(text='Will fall!', color='red', anchor=(0.5, -0.5))
+            stability_text_b.setPos(cx_b, cy_b)
+            self.before_plot.addItem(stability_text_b)
+        except Exception as e:
+            pass
         # Plot after (edges)
         self.after_plot.clear()
         for i, j in shape.edges:
@@ -71,4 +87,18 @@ class OptimizationTab(QWidget):
             )
         self.after_plot.plot(V_opt[:,0].cpu().numpy(), V_opt[:,1].cpu().numpy(), pen=None, symbol='o', symbolBrush='r', symbolSize=10)
         self.after_plot.setTitle("After Optimization")
+        # --- Center of Mass and Stability (After) ---
+        try:
+            area_a, com_a = calculate_center_of_mass(V_opt, E)
+            cx_a, cy_a = float(com_a[0].item()), float(com_a[1].item())
+            self.after_plot.plot([cx_a], [cy_a], pen=None, symbol='+', symbolBrush='red', symbolPen='red', symbolSize=20)
+            is_stable_a, _, _, _ = is_shape_stable(V_opt, E)
+            if is_stable_a:
+                stability_text_a = pg.TextItem(text='Stable', color='green', anchor=(0.5, -0.5))
+            else:
+                stability_text_a = pg.TextItem(text='Will fall!', color='red', anchor=(0.5, -0.5))
+            stability_text_a.setPos(cx_a, cy_a)
+            self.after_plot.addItem(stability_text_a)
+        except Exception as e:
+            pass
         self.info_label.setText("Optimization complete!") 
