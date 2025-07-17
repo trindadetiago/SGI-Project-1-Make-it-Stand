@@ -370,7 +370,12 @@ class ShapeGUI(QWidget):
                 # --- Stability check ---
                 try:
                     from shape_stability import is_shape_stable
-                    is_stable, x_cm, x_left, x_right = is_shape_stable(torch.tensor(shape.vertices, dtype=torch.float32), shape.edges)
+                    vertices_tensor = shape.vertices
+                    if not isinstance(vertices_tensor, torch.Tensor):
+                        vertices_tensor = torch.tensor(vertices_tensor, dtype=torch.float32)
+                    else:
+                        vertices_tensor = vertices_tensor.clone().detach().to(dtype=torch.float32)
+                    is_stable, x_cm, x_left, x_right = is_shape_stable(vertices_tensor, shape.edges)
                     if is_stable:
                         stability_text = pg.TextItem(text='Stable', color='green', anchor=(0.5, -0.5))
                     else:
