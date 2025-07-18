@@ -60,8 +60,9 @@ def get_center_of_mass_from_mesh_torch(vertices, edges, device=None):
 
     if not loops:
         print("Warning: No closed loops found in the provided edges.")
-        return 0, np.mean(vertices, axis=0) if len(vertices) > 0 else np.array([0,0])
-
+        com = torch.mean(vertices, dim=0) if num_vertices > 0 else torch.tensor([0.0, 0.0], device=device)
+        return torch.tensor(0.0, device=device), com
+    
     total_area_sum = 0
     total_cx_sum = 0
     total_cy_sum = 0
