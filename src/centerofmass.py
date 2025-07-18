@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 from collections import defaultdict
 
 def _find_all_loops(edges, num_vertices):
