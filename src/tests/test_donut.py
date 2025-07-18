@@ -4,7 +4,7 @@ import os
 
 sys.path.append(r"C:\Users\Hello\Desktop\Make-it-Stand-with-Quadrics-\src")
 
-from center_of_mass_V2 import calculate_center_of_mass, Shape2D
+from shape_mass_center import calculate_center_of_mass, Shape2D
 
 def test_donut_shape():
     """Tests the center of mass calculation for a donut shape."""
