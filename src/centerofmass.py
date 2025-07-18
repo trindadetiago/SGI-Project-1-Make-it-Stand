@@ -121,7 +121,7 @@ area, com = get_center_of_mass_from_mesh_torch(donut_vertices, donut_edges)
 print(f"Donut Area: {area:.4f}")
 print(f"Donut Center of Mass: {com.round(decimals=4)}")
 
-# 2. Jorge's case
+# 2. Hour glass case
 print("\n## Testing with an Hourglass Shape ##")
 hourglass_vertices = [
     [-2, 0], [-2, 2], [0, 2], [0, 0],
@@ -133,9 +133,6 @@ hourglass_edges = [
     [3, 4], [4, 5], [5, 6], [6, 3]
 ]
 
-area, com = get_center_of_mass_from_mesh(hourglass_vertices, hourglass_edges)
-
-# Expected area = 2*2 + 2*2 = 8
-# Expected CoM = [0.0, 0.0] due to symmetry
+area, com = get_center_of_mass_from_mesh_torch(hourglass_vertices, hourglass_edges)
 print(f"Hourglass Area: {area:.4f}")
-print(f"Hourglass Center of Mass: {np.round(com, 4)}")
+print(f"Hourglass Center of Mass: {com.round(decimals=4)}")
