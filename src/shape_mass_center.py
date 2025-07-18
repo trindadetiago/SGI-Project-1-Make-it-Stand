@@ -2,12 +2,7 @@ import torch
 from typing import Union, List, Tuple
 from collections import defaultdict
 from dataclasses import dataclass
-
-@dataclass
-class Shape2D:
-    """A simple dataclass to hold 2D shape information."""
-    vertices: torch.Tensor
-    edges: List[List[int]]
+from shape2d import Shape2D
 
 ## --- Core Helper and Calculation Functions ---
 
