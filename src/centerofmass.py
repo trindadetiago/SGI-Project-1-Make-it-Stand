@@ -77,7 +77,7 @@ def get_center_of_mass_from_mesh_torch(vertices, edges, device=None):
         
         v1 = verts_closed[:-1]
         v2 = verts_closed[1:]
-        
+
         # Calculate the cross product for area and centroid
         cross_product = v1[:, 0] * v2[:, 1] - v1[:, 1] * v2[:, 0]
 
@@ -87,8 +87,8 @@ def get_center_of_mass_from_mesh_torch(vertices, edges, device=None):
         
     final_signed_area = 0.5 * total_area_sum
 
-    if abs(final_signed_area) < 1e-9:
-        return 0, np.mean(vertices, axis=0)
+    if torch.abs(final_signed_area) < 1e-9:
+        return torch.tensor(0.0, device=device), torch.mean(vertices, dim=0)
 
     # Use the total sums to calculate the final centroid
     center_of_mass = (1 / (6 * final_signed_area)) * np.array([total_cx_sum, total_cy_sum])
