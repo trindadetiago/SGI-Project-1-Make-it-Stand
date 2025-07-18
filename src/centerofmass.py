@@ -54,8 +54,9 @@ def get_center_of_mass_from_mesh_torch(vertices, edges, device=None):
     Returns:
         tuple: (area, center_of_mass_coordinates) as torch.Tensors.
     """
-    vertices = np.array(vertices)
-    loops = _find_all_loops(edges, len(vertices))
+    vertices = torch.tensor(vertices, dtype=torch.float32, device=device)
+    num_vertices = len(vertices)
+    loops = _find_all_loops(edges, num_vertices)
 
     if not loops:
         print("Warning: No closed loops found in the provided edges.")
