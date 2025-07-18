@@ -50,7 +50,6 @@ def gradient_descent(f, V0, lr=0.01, tol=SUPPORT_TOL, max_iters=1000, verbose=Fa
     # Identify support vertices (those at y=0 or very close to it)
     support_mask = torch.abs(V0[:, 1]) < SUPPORT_TOL
     
-    stopped = None
     for i in range(max_iters):
         if V.grad is not None:
             V.grad.zero_()
@@ -58,7 +57,6 @@ def gradient_descent(f, V0, lr=0.01, tol=SUPPORT_TOL, max_iters=1000, verbose=Fa
         if verbose and i % 100 == 0:
             print(f"Iter {i}: loss = {loss.item():.6f}")
         if loss.item() < tol:
-            stopped = 'loss_below_tol'
             if verbose:
                 print(f"Stopping: loss {loss.item():.6g} < tol {tol}")
             break
@@ -68,7 +66,6 @@ def gradient_descent(f, V0, lr=0.01, tol=SUPPORT_TOL, max_iters=1000, verbose=Fa
             V.grad[support_mask] = 0.0
             V -= lr * V.grad
     else:
-        stopped = 'max_iters'
         if verbose:
             print(f"Stopping: reached max_iters = {max_iters}")
     if verbose:
