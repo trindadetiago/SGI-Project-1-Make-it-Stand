@@ -78,7 +78,6 @@ def get_center_of_mass_from_mesh_torch(vertices, edges, device=None):
         v1 = verts_closed[:-1]
         v2 = verts_closed[1:]
 
-        # Calculate the cross product for area and centroid
         cross_product = v1[:, 0] * v2[:, 1] - v1[:, 1] * v2[:, 0]
 
         total_area_sum += torch.sum(cross_product)
@@ -90,8 +89,6 @@ def get_center_of_mass_from_mesh_torch(vertices, edges, device=None):
     if torch.abs(final_signed_area) < 1e-9:
         return torch.tensor(0.0, device=device), torch.mean(vertices, dim=0)
 
-    # Use the total sums to calculate the final centroid
-    # Stack the sums into a vector for the final multiplication
     cx_cy_sum_vec = torch.stack([total_cx_sum, total_cy_sum])
     center_of_mass = (1 / (6 * final_signed_area)) * cx_cy_sum_vec
 
@@ -101,19 +98,15 @@ def get_center_of_mass_from_mesh_torch(vertices, edges, device=None):
 # --- Example Usage ---
 
 # 1. A square with a hole (a "donut")
-# Note: The outer loop is CCW, the inner loop (hole) is CW.
+
 print("## Testing with a Donut Shape ##")
 donut_vertices = [
-    # Outer square (CCW)
     [0, 0], [4, 0], [4, 4], [0, 4],
-    # Inner square (CW)
     [1, 1], [1, 3], [3, 3], [3, 1]
 ]
 
 donut_edges = [
-    # Outer loop
     [0, 1], [1, 2], [2, 3], [3, 0],
-    # Inner loop
     [4, 5], [5, 6], [6, 7], [7, 4]
 ]
 
