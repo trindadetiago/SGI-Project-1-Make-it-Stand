@@ -46,6 +46,13 @@ class OptimizationTab(QWidget):
         plot_layout.addWidget(self.before_plot, stretch=1)
         plot_layout.addWidget(self.after_plot, stretch=1)
         layout.addLayout(plot_layout)
+        
+        # Add save button for optimized shape
+        self.save_optimized_btn = QPushButton("Save Optimized Shape")
+        self.save_optimized_btn.clicked.connect(self.save_optimized_shape)
+        self.save_optimized_btn.setEnabled(False)  # Initially disabled until optimization is run
+        layout.addWidget(self.save_optimized_btn)
+        
         self.setLayout(layout)
 
     def plot_current_shape(self, use_last_optimized=False):
@@ -144,9 +151,46 @@ class OptimizationTab(QWidget):
         except Exception as e:
             pass
         self.info_label.setText("Optimization complete! Run again to further optimize the result.")
+        # Enable save button after successful optimization
+        self.save_optimized_btn.setEnabled(True)
 
     def reset_to_original(self):
         self.last_optimized_vertices = None
         self.plot_current_shape(use_last_optimized=False)
         self.after_plot.clear()
-        self.info_label.setText("Reset to original shape. Ready to optimize again.") 
+        self.info_label.setText("Reset to original shape. Ready to optimize again.")
+        # Disable save button when resetting
+        self.save_optimized_btn.setEnabled(False)
+
+    def save_optimized_shape(self):
+        """Save the optimized shape to a JSON file."""
+        if self.last_optimized_vertices is None:
+            return
+            
+        from PyQt5.QtWidgets import QFileDialog
+        import os
+        
+        # Get the shapes directory
+        shapes_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'shapes')
+        
+        # Create a new shape with optimized vertices
+        optimized_shape = Shape2D()
+        optimized_shape.vertices = self.last_optimized_vertices
+        optimized_shape.edges = self.main_window.shape.edges  # Keep original edges
+        
+        # Open file dialog for saving
+        path, _ = QFileDialog.getSaveFileName(
+            self, 
+            'Save Optimized Shape JSON', 
+            shapes_dir, 
+            'JSON Files (*.json)'
+        )
+        
+        if path:
+            optimized_shape.save_to_json(path)
+            self.info_label.setText(f"Optimized shape saved to: {os.path.basename(path)}")
+            # Refresh the shape dropdowns in other tabs
+            if hasattr(self.main_window, 'visualize_tab'):
+                self.main_window.visualize_tab.refresh_shape_dropdown()
+            if hasattr(self.main_window, 'compare_tab'):
+                self.main_window.compare_tab.refresh_shape_dropdowns() 
