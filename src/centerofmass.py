@@ -40,7 +40,7 @@ def _find_all_loops(edges, num_vertices):
     
     return all_loops
 
-def get_center_of_mass_from_mesh_torch(vertices, edges):
+def get_center_of_mass_from_mesh_torch(vertices, edges, device=None):
     """
     Calculates the center of mass for a shape defined by vertices and edges
     using PyTorch, correctly handling shapes with holes.
@@ -48,6 +48,8 @@ def get_center_of_mass_from_mesh_torch(vertices, edges):
     Args:
         vertices (list or torch.Tensor): A list of [x, y] coordinates.
         edges (list or torch.Tensor): A list of [v1, v2] vertex indices.
+        device (str, optional): The device to run the computations on ('cpu' or 'cuda').
+                                  Defaults to None.
 
     Returns:
         tuple: (area, center_of_mass_coordinates) as torch.Tensors.
