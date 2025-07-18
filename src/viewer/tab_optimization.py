@@ -43,6 +43,9 @@ class OptimizationTab(QWidget):
         # Make plots bigger
         self.before_plot.setMinimumSize(500, 500)
         self.after_plot.setMinimumSize(500, 500)
+        # Show grid on both plots
+        self.before_plot.showGrid(x=True, y=True, alpha=0.3)
+        self.after_plot.showGrid(x=True, y=True, alpha=0.3)
         plot_layout.addWidget(self.before_plot, stretch=1)
         plot_layout.addWidget(self.after_plot, stretch=1)
         layout.addLayout(plot_layout)
@@ -58,6 +61,7 @@ class OptimizationTab(QWidget):
     def plot_current_shape(self, use_last_optimized=False):
         shape = self.main_window.shape
         self.before_plot.clear()
+        self.before_plot.showGrid(x=True, y=True, alpha=0.3)
         if shape is None:
             self.before_plot.setTitle("Before Optimization")
             return
@@ -126,6 +130,7 @@ class OptimizationTab(QWidget):
         self.plot_current_shape(use_last_optimized=False)
         # Plot after (edges)
         self.after_plot.clear()
+        self.after_plot.showGrid(x=True, y=True, alpha=0.3)
         for i, j in shape.edges:
             self.after_plot.plot(
                 [V_opt[i, 0].item(), V_opt[j, 0].item()],
