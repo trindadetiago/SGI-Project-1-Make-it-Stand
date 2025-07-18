@@ -1,11 +1,13 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFileDialog, QLabel
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QFileDialog, QLabel
+import pyqtgraph as pg
+from .custom_viewbox import CustomViewBox
 import os
 
 class NewTab(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        layout = QHBoxLayout()
+        controls_layout = QHBoxLayout()
         self.draw_mode_btn = QPushButton('Add Vertices')
         self.add_edge_mode_btn = QPushButton('Add Edges')
         self.save_btn = QPushButton('Save Shape')
@@ -15,11 +17,26 @@ class NewTab(QWidget):
         self.draw_mode_btn.clicked.connect(self.toggle_draw_mode)
         self.add_edge_mode_btn.clicked.connect(self.toggle_add_edge_mode)
         self.save_btn.clicked.connect(self.save_shape)
-        layout.addWidget(self.draw_mode_btn)
-        layout.addWidget(self.add_edge_mode_btn)
-        layout.addWidget(self.save_btn)
-        layout.addWidget(self.info_label)
-        self.setLayout(layout)
+        controls_layout.addWidget(self.draw_mode_btn)
+        controls_layout.addWidget(self.add_edge_mode_btn)
+        controls_layout.addWidget(self.save_btn)
+        controls_layout.addWidget(self.info_label)
+        # Plot widget
+        self.plot_widget = pg.PlotWidget(viewBox=CustomViewBox(self.main_window))
+        self.plot_widget.setBackground('w')
+        self.plot_widget.setAspectLocked(True)
+        self.plot_widget.setMinimumHeight(600)
+        self.plot_widget.setMinimumWidth(900)
+        self.plot_widget.scene().sigMouseClicked.connect(self.main_window.on_plot_click)
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)  # Grid ON by default
+        # Add orange y=0 line
+        y0_line = pg.InfiniteLine(pos=0, angle=0, pen=pg.mkPen('orange', width=2))
+        self.plot_widget.addItem(y0_line)
+        # Main layout
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(controls_layout)
+        main_layout.addWidget(self.plot_widget, stretch=1)
+        self.setLayout(main_layout)
         self.update_info()
 
     def toggle_draw_mode(self):
@@ -45,7 +62,7 @@ class NewTab(QWidget):
         self.main_window.drawing_shape = None
         self.main_window.shape = None
         self.main_window.selected_vertices = []
-        self.main_window.plot_widget.clear()
-        vb = self.main_window.plot_widget.getViewBox()
+        self.plot_widget.clear()
+        vb = self.plot_widget.getViewBox()
         vb.setRange(xRange=[-1, 1], yRange=[-1, 1], padding=0.1)
         self.update_info() 
