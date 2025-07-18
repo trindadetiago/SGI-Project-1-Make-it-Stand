@@ -117,13 +117,9 @@ donut_edges = [
     [4, 5], [5, 6], [6, 7], [7, 4]
 ]
 
-area, com = get_center_of_mass_from_mesh(donut_vertices, donut_edges)
-
-# Expected area = 4*4 - 2*2 = 12
-# Expected CoM = [2.0, 2.0] due to symmetry
+area, com = get_center_of_mass_from_mesh_torch(donut_vertices, donut_edges)
 print(f"Donut Area: {area:.4f}")
-print(f"Donut Center of Mass: {np.round(com, 4)}")
-
+print(f"Donut Center of Mass: {com.round(decimals=4)}")
 
 # 2. Jorge's case
 print("\n## Testing with an Hourglass Shape ##")
