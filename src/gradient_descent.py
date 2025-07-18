@@ -26,4 +26,4 @@ def gradient_descent(f, x0, b0, c0, lr, tol = 1e-6, max_iters = 1000):
 			b -= lr * b.grad 
 			c -= lr * c.grad
 
-		return x, b, c
+	return x, b, c
