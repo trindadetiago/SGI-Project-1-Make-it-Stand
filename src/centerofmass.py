@@ -91,10 +91,12 @@ def get_center_of_mass_from_mesh_torch(vertices, edges, device=None):
         return torch.tensor(0.0, device=device), torch.mean(vertices, dim=0)
 
     # Use the total sums to calculate the final centroid
-    center_of_mass = (1 / (6 * final_signed_area)) * np.array([total_cx_sum, total_cy_sum])
-    
+    # Stack the sums into a vector for the final multiplication
+    cx_cy_sum_vec = torch.stack([total_cx_sum, total_cy_sum])
+    center_of_mass = (1 / (6 * final_signed_area)) * cx_cy_sum_vec
+
     # Return the absolute area and the calculated center of mass
-    return abs(final_signed_area), center_of_mass
+    return torch.abs(final_signed_area), center_of_mass
 
 # --- Example Usage ---
 
