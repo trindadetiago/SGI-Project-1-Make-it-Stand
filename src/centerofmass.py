@@ -63,9 +63,10 @@ def get_center_of_mass_from_mesh_torch(vertices, edges, device=None):
         com = torch.mean(vertices, dim=0) if num_vertices > 0 else torch.tensor([0.0, 0.0], device=device)
         return torch.tensor(0.0, device=device), com
     
-    total_area_sum = 0
-    total_cx_sum = 0
-    total_cy_sum = 0
+    # Initialize sums as 0-dimensional tensors
+    total_area_sum = torch.tensor(0.0, device=device)
+    total_cx_sum = torch.tensor(0.0, device=device)
+    total_cy_sum = torch.tensor(0.0, device=device)
 
     # Calculate properties for each loop and add them to the totals
     for loop_indices in loops:
