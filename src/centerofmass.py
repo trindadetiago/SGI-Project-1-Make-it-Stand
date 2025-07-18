@@ -73,9 +73,7 @@ def get_center_of_mass_from_mesh_torch(vertices, edges, device=None):
         loop_verts = vertices[loop_indices]
         
         # Close the loop for calculation
-        verts_closed = np.vstack([loop_verts, loop_verts[0]])
-        x = verts_closed[:, 0]
-        y = verts_closed[:, 1]
+        verts_closed = torch.vstack([loop_verts, loop_verts[0].unsqueeze(0)])
         
         cross_product = np.cross(verts_closed[:-1], verts_closed[1:])
         
